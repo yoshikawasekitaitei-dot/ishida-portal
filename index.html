@@ -34,7 +34,7 @@ main{max-width:640px;margin:0 auto;padding:calc(16px + env(safe-area-inset-top,0
 header small{display:block;font-size:10px;letter-spacing:.18em;color:var(--muted)}
 h1{font-family:var(--display);font-size:22px;margin:0;line-height:1.4}
 .sub{color:var(--muted);font-size:12px;margin:2px 0 0}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;min-width:0}
 .card-h{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
 h2{font-size:15px;margin:0}
 .scope{font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;background:var(--surface2);color:var(--muted)}
@@ -77,7 +77,7 @@ function barsHtml(arr, max){
   return `<div class="bars">${arr.map((v,i)=>`<div class="bar"><i class="${v?'':'z'}" style="height:${max?Math.max(v/max*80,2):2}px"></i>${i+1}</div>`).join('')}</div>`;
 }
 function cheer(me, d){
-  if (!me.sum) return me.bsum ? `別注 ${yen(me.bsum)} のご案内、ありがとうございます。` : '今月の記録はこれからです。記録が入るとここに表示されます。';
+  if (!me.sum) return (me.bsum || me.esum) ? `${[me.bsum?'別注 '+yen(me.bsum):'',me.esum?'エステ '+yen(me.esum):''].filter(Boolean).join('・')} のご案内、ありがとうございます。` : '今月の記録はこれからです。記録が入るとここに表示されます。';
   if (me.rank === 1) return '接客部でいちばんです。お客様への一言が届いています。';
   const days = me.daily.map((v,i)=>[v,i]).filter(x=>x[0]>0);
   const last = days[days.length-1];
@@ -93,6 +93,7 @@ function meCard(me, d){
       ${me.rank ? `<span class="chip">接客部 <b>${me.rank}位</b> / ${d.ranked}名</span>` : ''}
       ${me.rank ? `<span class="chip">${me.gapToAbove != null ? `1つ上まで <b>${yen(me.gapToAbove)}</b>` : '<b>トップ</b>'}</span>` : ''}
       ${me.bsum ? `<span class="chip">別注 <b>${yen(me.bsum)}</b></span>` : ''}
+      ${me.esum ? `<span class="chip">エステ <b>${yen(me.esum)}</b></span>` : ''}
     </div>
     <div class="cheer">${cheer(me, d)}</div>
     ${barsHtml(me.daily, Math.max(...me.daily, 1))}
@@ -101,16 +102,16 @@ function meCard(me, d){
 function teamCard(d){
   const t = d.team;
   return `<div class="card"><div class="card-h"><h2>接客部 全体</h2><span class="scope">全員に表示</span></div>
-    <div class="eyebrow">飲料＋別注</div><div class="big" style="font-size:30px">${yen(t.drinkTotal + t.betsuTotal)}</div>
-    <div class="chips"><span class="chip">飲料 <b>${yen(t.drinkTotal)}</b></span><span class="chip">別注 <b>${yen(t.betsuTotal)}</b></span></div>
+    <div class="eyebrow">飲料＋別注＋エステ</div><div class="big" style="font-size:30px">${yen(t.drinkTotal + t.betsuTotal + (t.esteTotal||0))}</div>
+    <div class="chips"><span class="chip">飲料 <b>${yen(t.drinkTotal)}</b></span><span class="chip">別注 <b>${yen(t.betsuTotal)}</b></span><span class="chip">エステ <b>${yen(t.esteTotal||0)}</b></span></div>
     ${barsHtml(t.drinkDaily, Math.max(...t.drinkDaily, 1))}<p class="note">棒は日ごとの飲料売上の合計です。</p></div>`;
 }
 function rankCard(d){
   if (!d.ranking) return '';
   const mx = Math.max(...d.ranking.map(r=>r.sum), 1);
   return `<div class="card"><div class="card-h"><h2>担当別ランキング（飲料）</h2><span class="scope admin">管理者だけに表示</span></div>
-    <div class="tbl"><table><thead><tr><th>順位</th><th>担当</th><th class="r">飲料</th><th class="r">別注</th><th class="r">構成比</th></tr></thead><tbody>
-    ${d.ranking.map(r=>`<tr><td><b>${r.rank ? r.rank+'位' : '—'}</b></td><td><b>${esc(r.name)}</b></td><td class="r">${r.sum ? yen(r.sum) : '記録なし'}</td><td class="r">${r.bsum ? yen(r.bsum) : '—'}</td><td class="r">${d.team.drinkTotal ? (r.sum/d.team.drinkTotal*100).toFixed(1)+'%' : '—'}</td></tr>`).join('')}
+    <div class="tbl"><table><thead><tr><th>順位</th><th>担当</th><th class="r">飲料</th><th class="r">別注</th><th class="r">エステ</th><th class="r">構成比</th></tr></thead><tbody>
+    ${d.ranking.map(r=>`<tr><td><b>${r.rank ? r.rank+'位' : '—'}</b></td><td><b>${esc(r.name)}</b></td><td class="r">${r.sum ? yen(r.sum) : '記録なし'}</td><td class="r">${r.bsum ? yen(r.bsum) : '—'}</td><td class="r">${r.esum ? yen(r.esum) : '—'}</td><td class="r">${d.team.drinkTotal ? (r.sum/d.team.drinkTotal*100).toFixed(1)+'%' : '—'}</td></tr>`).join('')}
     </tbody></table></div></div>`;
 }
 function render(d){
@@ -128,9 +129,9 @@ function showError(msg){
 
 /* 見本データ（?demo=1 のとき）：名前も金額も架空です */
 const DEMO = {status:'OK',role:new URLSearchParams(location.search).get('role')==='admin'?'admin':'staff',displayName:'見本',fileName:'R8.売り上げ表10月（見本）',month:10,lastDay:3,updatedAt:'10月4日 22:30',ranked:9,
-  team:{drinkTotal:120000,betsuTotal:40000,drinkDaily:[30000,40000,50000]},
-  me:{name:'見本 花子',sum:14000,bsum:22000,rank:5,gapToAbove:1500,share:14000/120000,daily:[0,8000,6000]},
-  ranking:[['見本A',24000,0],['見本B',18500,0],['見本C',16500,11000],['見本D',15500,0],['見本 花子',14000,22000],['見本E',12000,0],['見本F',9500,0],['見本G',7000,0],['見本H',3000,0],['見本I',0,7000]].map((r,i)=>({rank:r[1]?i+1:null,name:r[0],sum:r[1],bsum:r[2]}))};
+  team:{drinkTotal:120000,betsuTotal:40000,esteTotal:16500,drinkDaily:[30000,40000,50000]},
+  me:{name:'見本 花子',sum:14000,bsum:22000,esum:16500,rank:5,gapToAbove:1500,share:14000/120000,daily:[0,8000,6000]},
+  ranking:[['見本A',24000,0],['見本B',18500,0],['見本C',16500,11000],['見本D',15500,0],['見本 花子',14000,22000],['見本E',12000,0],['見本F',9500,0],['見本G',7000,0],['見本H',3000,0],['見本I',0,7000]].map((r,i)=>({rank:r[1]?i+1:null,name:r[0],sum:r[1],bsum:r[2],esum:r[0]==='見本 花子'?16500:0}))};
 
 async function start(){
   if (new URLSearchParams(location.search).get('demo')) {
