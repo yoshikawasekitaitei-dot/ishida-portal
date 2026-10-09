@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>いしだポータル 数字</title>
+<title>いしだポータル</title>
 <!--
   石苔亭いしだ 社内ポータル ― LINE WORKS ミニアプリ（WOFF）用の画面
   ★ 設定するのは下の2か所だけです（手順書「C-4」）
@@ -30,7 +30,7 @@
   --gold:#d6ad5e; --gold-soft:#3a3222; --crit:#e07a7a; --crit-soft:#402626; color-scheme:dark}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.65}
-main{max-width:640px;margin:0 auto;padding:calc(16px + env(safe-area-inset-top,0px)) 16px calc(32px + env(safe-area-inset-bottom,0px));display:grid;gap:14px}
+main{max-width:640px;margin:0 auto;padding:calc(16px + env(safe-area-inset-top,0px)) 16px calc(96px + env(safe-area-inset-bottom,0px));display:grid;gap:14px}
 header small{display:block;font-size:10px;letter-spacing:.18em;color:var(--muted)}
 h1{font-family:var(--display);font-size:22px;margin:0;line-height:1.4}
 .sub{color:var(--muted);font-size:12px;margin:2px 0 0}
@@ -59,10 +59,49 @@ td{padding:9px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
 .state{text-align:center;padding:40px 18px}
 .state p{margin:8px 0 0;color:var(--muted)}
 .foot{font-size:11px;color:var(--muted);text-align:center}
+/* 下のメニュー */
+.tabbar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
+.tabbar[hidden]{display:none}
+.tabbar button{flex:1;max-width:240px;font:inherit;font-size:12px;font-weight:700;background:none;border:0;color:var(--muted);padding:9px 0 10px;display:grid;justify-items:center;gap:2px;position:relative;cursor:pointer}
+.tabbar button[aria-current="page"]{color:var(--accent)}
+.tabbar svg{width:22px;height:22px}
+.badge{position:absolute;top:4px;left:calc(50% + 6px);background:var(--crit);color:#fff;border-radius:999px;font-size:10px;min-width:17px;height:17px;line-height:17px;padding:0 4px}
+/* お知らせ */
+.btn{font:inherit;font-weight:700;padding:9px 16px;border-radius:10px;border:0;background:var(--accent);color:var(--on-accent);cursor:pointer}
+.btn.ghost{background:var(--surface2);color:var(--fg)}
+.btn.danger{background:var(--crit-soft);color:var(--crit)}
+.btn:disabled{opacity:.5}
+.nlist{display:grid}
+.nitem{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:10px minmax(0,1fr);gap:10px;padding:12px 2px;border-bottom:1px solid var(--line)}
+.nitem:last-child{border-bottom:0}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--crit);margin-top:8px}
+.dot.read{background:transparent}
+.ntitle{font-weight:700;display:block;overflow-wrap:anywhere}
+.nmeta{font-size:12px;color:var(--muted)}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:0 7px;border-radius:999px;background:var(--surface2);color:var(--muted);margin-right:4px}
+.tag.must{background:var(--crit-soft);color:var(--crit)}
+.nbody{white-space:pre-wrap;overflow-wrap:anywhere;margin:12px 0 0}
+.back{all:unset;cursor:pointer;color:var(--accent);font-weight:700;font-size:14px}
+.readbar{height:8px;border-radius:999px;background:var(--surface2);overflow:hidden;margin:8px 0}
+.readbar i{display:block;height:100%;background:var(--accent)}
+.names{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.names span{font-size:12px;background:var(--surface2);border-radius:999px;padding:2px 10px}
+.names.un span{background:var(--gold-soft);color:var(--gold)}
+.form{display:grid;gap:12px}
+.form label{display:grid;gap:4px;font-size:13px;font-weight:700}
+.form input,.form select,.form textarea{font:inherit;font-weight:400;width:100%;min-width:0;padding:9px 11px;border-radius:9px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
+.form textarea{min-height:160px;resize:vertical}
+.form .chk{display:flex;align-items:center;gap:8px;font-weight:500}
+.form .chk input{width:auto}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.toast{position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:9px 16px;border-radius:10px;font-size:13px;z-index:9;max-width:90%}
+.toast[hidden]{display:none}
 </style>
 </head>
 <body>
 <main id="app"><div class="card state"><b>読み込み中…</b><p>LINE WORKS で本人を確認しています</p></div></main>
+<nav class="tabbar" id="tabbar" hidden></nav>
+<div class="toast" id="toast" role="status" hidden></div>
 
 <script>
 const $app = document.getElementById('app');
@@ -114,17 +153,138 @@ function rankCard(d){
     ${d.ranking.map(r=>`<tr><td><b>${r.rank ? r.rank+'位' : '—'}</b></td><td><b>${esc(r.name)}</b></td><td class="r">${r.sum ? yen(r.sum) : '記録なし'}</td><td class="r">${r.bsum ? yen(r.bsum) : '—'}</td><td class="r">${r.esum ? yen(r.esum) : '—'}</td><td class="r">${d.team.drinkTotal ? (r.sum/d.team.drinkTotal*100).toFixed(1)+'%' : '—'}</td></tr>`).join('')}
     </tbody></table></div></div>`;
 }
-function render(d){
+/* ---------- 今月の数字 ---------- */
+function salesView(d){
+  if (!d) return `<div class="card state"><b>読み込み中…</b></div>`;
   if (d.status === 'UNREGISTERED') {
-    $app.innerHTML = `<div class="card state"><b>まだ登録されていません</b><p>${esc(d.displayName || '')}さんの利用登録を、支配人に依頼してください。登録されると、ここにあなたの数字が表示されます。</p></div>`;
-    return;
+    return `<div class="card state"><b>数字はまだ表示されません</b><p>${esc(d.displayName || '')}さんの売上表のシートが、まだ登録されていません。接客部の方は、支配人に登録を依頼してください。お知らせはこのまま使えます。</p></div>`;
   }
-  if (d.status !== 'OK') { showError(d.message || '読み込みに失敗しました。'); return; }
-  $app.innerHTML = header(d) + (d.role === 'admin' ? rankCard(d) + meCard(d.me, d) : meCard(d.me, d)) + teamCard(d) +
+  if (d.status !== 'OK') return errorCard(d.message || '読み込みに失敗しました。');
+  return header(d) + (d.role === 'admin' ? rankCard(d) + meCard(d.me, d) : meCard(d.me, d)) + teamCard(d) +
     `<p class="foot">数字は約5分ごとに売上表から読み直しています。</p>`;
 }
-function showError(msg){
-  $app.innerHTML = `<div class="card state"><b>表示できませんでした</b><p>${esc(msg)}</p><p><button onclick="location.reload()" style="font:inherit;padding:8px 18px;border-radius:10px;border:0;background:var(--accent);color:var(--on-accent);font-weight:700">もう一度読み込む</button></p></div>`;
+function errorCard(msg){
+  return `<div class="card state"><b>表示できませんでした</b><p>${esc(msg)}</p><p><button class="btn" data-act="reload">もう一度読み込む</button></p></div>`;
+}
+function showError(msg){ $app.innerHTML = errorCard(msg); }
+
+/* ---------- お知らせ ---------- */
+const S = { tab: 'notice', sales: null, nb: null, open: null, compose: false, busy: false };
+const unreadCount = () => S.nb && S.nb.notices ? S.nb.notices.filter(n => !n.read).length : 0;
+const isAdmin = () => !!((S.nb && S.nb.role === 'admin') || (S.sales && S.sales.role === 'admin'));
+
+function noticeList(){
+  const nb = S.nb;
+  if (!nb) return `<div class="card state"><b>読み込み中…</b></div>`;
+  if (nb.status !== 'OK') return errorCard(nb.message || 'お知らせを読み込めませんでした。');
+  const list = nb.notices;
+  const must = list.filter(n => n.must && !n.read).length;
+  return `<header><small>SEKITEI ISHIDA</small><h1>お知らせ</h1>
+    <p class="sub">${list.length ? `未確認 ${unreadCount()}件${must ? `（うち必読 ${must}件）` : ''}` : ''}</p></header>
+    ${isAdmin() ? `<div><button class="btn" data-act="compose">＋ お知らせを書く</button></div>` : ''}
+    <div class="card">${list.length ? `<div class="nlist">${list.map(n => `
+      <button class="nitem" data-open="${esc(n.id)}"><span class="dot ${n.read ? 'read' : ''}"></span>
+        <span style="min-width:0"><span>${n.must ? '<span class="tag must">必読</span>' : ''}<span class="tag">${esc(n.cat)}</span></span>
+        <span class="ntitle">${esc(n.title)}</span>
+        <span class="nmeta">${esc(n.by)}・${esc(n.date)}${isAdmin() ? `・既読 ${n.readCount}/${n.total}` : ''}</span></span></button>`).join('')}</div>`
+      : `<p class="note" style="margin:0">お知らせはまだありません。</p>`}</div>`;
+}
+function noticeDetail(n){
+  const pct = n.total ? Math.min(100, Math.round(n.readCount / n.total * 100)) : 0;
+  return `<button class="back" data-act="back">← お知らせ一覧</button>
+    <div class="card"><div>${n.must ? '<span class="tag must">必読</span>' : ''}<span class="tag">${esc(n.cat)}</span></div>
+      <h2 style="font-size:18px;margin-top:6px;overflow-wrap:anywhere">${esc(n.title)}</h2>
+      <div class="nmeta">${esc(n.by)}・${esc(n.date)}</div>
+      <p class="nbody">${esc(n.body)}</p></div>
+    ${isAdmin() && n.readers ? `<div class="card"><div class="card-h"><h2>既読の状況</h2><span class="scope admin">管理者だけに表示</span></div>
+      <div class="eyebrow">${n.readCount} / ${n.total}名が確認（${pct}%）</div><div class="readbar"><i style="width:${pct}%"></i></div>
+      ${n.unread.length ? `<div class="eyebrow" style="margin-top:10px">まだの人（${n.unread.length}名）</div><div class="names un">${n.unread.map(x => `<span>${esc(x)}</span>`).join('')}</div>` : '<p class="note">全員が確認しました。</p>'}
+      ${n.readers.length ? `<div class="eyebrow" style="margin-top:12px">確認した人</div><div class="names">${n.readers.map(x => `<span>${esc(x.name)}　${esc(x.at)}</span>`).join('')}</div>` : ''}
+      <p class="note">人数は、一度でもこのミニアプリを開いた人で数えています。</p>
+      <div class="row" style="margin-top:12px"><button class="btn danger" data-act="delete">このお知らせを消す</button></div></div>` : ''}`;
+}
+function composeView(){
+  const cats = (S.nb && S.nb.cats) || ['全体', '業務', '人事', '行事'];
+  return `<button class="back" data-act="back">← お知らせ一覧</button>
+    <div class="card"><h2 style="margin-bottom:12px">お知らせを書く</h2>
+    <form class="form" id="nform">
+      <label>区分<select name="cat">${cats.map(c => `<option>${esc(c)}</option>`).join('')}</select></label>
+      <label>件名<input name="title" maxlength="80" required></label>
+      <label>本文<textarea name="body" maxlength="4000"></textarea></label>
+      <label class="chk"><input type="checkbox" name="must"> 必読にする（一覧で赤く表示）</label>
+      <div class="row"><button class="btn" type="submit">投稿する</button><button class="btn ghost" type="button" data-act="back">やめる</button></div>
+    </form></div>`;
+}
+
+/* ---------- 画面の切り替え ---------- */
+const ICON = {
+  notice: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>',
+  sales: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15v2M12 10v7M17 6v11"/></svg>',
+};
+function draw(){
+  const tb = document.getElementById('tabbar');
+  tb.hidden = false;
+  const u = unreadCount();
+  tb.innerHTML = `<button data-tab="notice" aria-current="${S.tab === 'notice' ? 'page' : 'false'}">${ICON.notice}${u ? `<span class="badge">${u}</span>` : ''}お知らせ</button>
+    <button data-tab="sales" aria-current="${S.tab === 'sales' ? 'page' : 'false'}">${ICON.sales}今月の数字</button>`;
+  if (S.tab === 'sales') { $app.innerHTML = salesView(S.sales); return; }
+  if (S.compose) { $app.innerHTML = composeView(); return; }
+  const n = S.open && S.nb && S.nb.notices && S.nb.notices.find(x => x.id === S.open);
+  $app.innerHTML = n ? noticeDetail(n) : noticeList();
+}
+function toast(t){ const el = document.getElementById('toast'); el.textContent = t; el.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => el.hidden = true, 2600); }
+
+document.addEventListener('click', async ev => {
+  const t = ev.target.closest('button'); if (!t) return;
+  if (t.dataset.tab) { S.tab = t.dataset.tab; S.open = null; S.compose = false; draw(); window.scrollTo(0, 0); return; }
+  if (t.dataset.open) {
+    S.open = t.dataset.open; draw(); window.scrollTo(0, 0);
+    const n = S.nb.notices.find(x => x.id === S.open);
+    if (n && !n.read) {
+      n.read = true; n.readCount++; draw();
+      call('read', { id: n.id }, true).catch(() => {});
+    }
+    return;
+  }
+  const a = t.dataset.act;
+  if (a === 'reload') { location.reload(); return; }
+  if (a === 'back') { S.open = null; S.compose = false; draw(); return; }
+  if (a === 'compose') { S.compose = true; draw(); window.scrollTo(0, 0); return; }
+  if (a === 'delete') {
+    if (S.busy) return; S.busy = true; t.disabled = true; t.textContent = '消しています…';
+    try { const id = S.open; await call('delete', { id: id }); S.open = null; draw(); toast('お知らせを消しました'); }
+    catch (e) { toast((e && e.message) || '消せませんでした'); t.disabled = false; t.textContent = 'このお知らせを消す'; }
+    S.busy = false; return;
+  }
+});
+document.addEventListener('submit', async ev => {
+  if (ev.target.id !== 'nform') return;
+  ev.preventDefault();
+  if (S.busy) return;
+  const f = new FormData(ev.target), btn = ev.target.querySelector('[type=submit]');
+  const v = { cat: f.get('cat'), title: String(f.get('title') || '').trim(), body: String(f.get('body') || '').trim(), must: !!f.get('must') };
+  if (!v.title) { toast('件名を入れてください'); return; }
+  S.busy = true; btn.disabled = true; btn.textContent = '投稿しています…';
+  try { await call('post', v); S.compose = false; S.open = null; draw(); window.scrollTo(0, 0); toast('投稿しました'); }
+  catch (e) { toast((e && e.message) || '投稿できませんでした'); btn.disabled = false; btn.textContent = '投稿する'; }
+  S.busy = false;
+});
+
+/* ---------- サーバーとのやり取り ---------- */
+let TOKEN = '';
+/* quiet=true のときは画面を書き換えない（既読の記録など） */
+async function call(action, extra, quiet){
+  if (DEMO_MODE) { demoCall(action, extra || {}); return; }
+  const r = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(Object.assign({ token: TOKEN, action: action }, extra || {})) });
+  const j = await r.json();
+  if (j.status !== 'OK') throw new Error(j.message || 'エラーが起きました');
+  if (quiet) {
+    // 開いている画面はそのままにして、件数だけ新しくする
+    const keep = {}; (S.nb && S.nb.notices || []).forEach(n => { if (n.read) keep[n.id] = 1; });
+    j.notices.forEach(n => { if (keep[n.id]) n.read = true; });
+  }
+  S.nb = j; draw();
 }
 
 /* 見本データ（?demo=1 のとき）：名前も金額も架空です */
@@ -133,17 +293,35 @@ const DEMO = {status:'OK',role:new URLSearchParams(location.search).get('role')=
   me:{name:'見本 花子',sum:14000,bsum:22000,esum:16500,rank:5,gapToAbove:1500,share:14000/120000,daily:[0,8000,6000]},
   ranking:[['見本A',24000,0],['見本B',18500,0],['見本C',16500,11000],['見本D',15500,0],['見本 花子',14000,22000],['見本E',12000,0],['見本F',9500,0],['見本G',7000,0],['見本H',3000,0],['見本I',0,7000]].map((r,i)=>({rank:r[1]?i+1:null,name:r[0],sum:r[1],bsum:r[2],esum:r[0]==='見本 花子'?16500:0}))};
 
+const DEMO_MODE = !!new URLSearchParams(location.search).get('demo');
+const DEMO_NB = { status: 'OK', role: DEMO.role, cats: ['全体', '業務', '人事', '行事'], notices: [
+  { id: 'd3', date: '10月9日 9:00', by: '見本 支配人', cat: '人事', must: true, title: '冬季シフト希望の提出について（10/15締切）', body: '11月〜2月のシフト希望を、各部署のリーダー経由で10月15日までに提出してください。', read: false, readCount: 6, total: 10, unread: ['見本A', '見本B', '見本C', '見本D'] },
+  { id: 'd2', date: '10月7日 15:30', by: '見本 支配人', cat: '業務', must: false, title: '紅葉シーズンの貸切風呂ご案内手順', body: '10月10日より、貸切風呂のご予約はチェックイン時にフロントでお受けします。', read: true, readCount: 10, total: 10, unread: [] },
+] };
+DEMO_NB.notices.forEach(n => { n.readers = Array.from({ length: n.readCount }, (_, i) => ({ name: '見本' + (i + 1), at: '10月9日 10:0' + i })); });
+function demoCall(action, x){
+  if (action === 'post') DEMO_NB.notices.unshift({ id: 'd' + Date.now(), date: 'たった今', by: '見本', cat: x.cat, must: x.must, title: x.title, body: x.body, read: true, readCount: 1, total: 10, readers: [{ name: '見本', at: 'たった今' }], unread: ['見本A', '見本B', '見本C', '見本D', '見本E', '見本F', '見本G', '見本H', '見本I'] });
+  if (action === 'delete') DEMO_NB.notices = DEMO_NB.notices.filter(n => n.id !== x.id);
+  S.nb = DEMO_NB; draw();
+}
+
 async function start(){
-  if (new URLSearchParams(location.search).get('demo')) {
-    if (DEMO.role !== 'admin') delete DEMO.ranking; else delete DEMO.me;
-    render(DEMO); return;
+  if (DEMO_MODE) {
+    if (DEMO.role !== 'admin') { delete DEMO.ranking; DEMO_NB.notices.forEach(n => { delete n.readers; delete n.unread; }); }
+    else delete DEMO.me;
+    S.sales = DEMO; S.nb = DEMO_NB; draw(); return;
   }
   try {
     await woff.init({ woffId: WOFF_ID });
     if (!woff.isLoggedIn()) { woff.login(); return; }   // LINE WORKS アプリの外で開いたとき
-    const token = woff.getAccessToken();
-    const r = await fetch(API_URL + '?token=' + encodeURIComponent(token));
-    render(await r.json());
+    TOKEN = woff.getAccessToken();
+    draw();
+    // お知らせと数字を同時に読み込む
+    const pSales = fetch(API_URL + '?token=' + encodeURIComponent(TOKEN)).then(r => r.json())
+      .catch(e => ({ status: 'ERROR', message: (e && e.message) || String(e) }));
+    const pNb = call('notices').catch(e => { S.nb = { status: 'ERROR', message: (e && e.message) || String(e) }; });
+    S.sales = await pSales; draw();
+    await pNb; draw();
   } catch (e) {
     showError((e && e.message) || String(e));
   }
