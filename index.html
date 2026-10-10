@@ -367,14 +367,16 @@ const FORMS = [
     ['learn', '所感・学んだこと', 'textarea'], ['next', '今後の対応・現場への展開', 'textarea', null, false, '誰に、いつ、何を共有するか']] },
 ];
 const A = { tab: 'queue', form: null, open: null, edit: null };
-const appBadge = () => S.ap && S.ap.apps ? S.ap.apps.filter(a => a.awaitingMe || (a.mine && a.status === 'returned')).length : 0;
+const appBadge = () => S.ap && S.ap.apps ? S.ap.apps.filter(a => a.awaitingMe || a.confirmMe || (a.mine && a.status === 'returned')).length : 0;
 function appPill(a){
   if (a.status === 'returned') return '<span class="pill" style="color:var(--crit)"><i></i>差し戻し</span>';
+  if (a.confirmMe) return '<span class="pill" style="color:var(--gold)"><i></i>社長の確認待ち（あなた）</span>';
+  if (a.status === 'approved' && a.form === 'report') return `<span class="pill" style="color:var(--accent)"><i></i>承認済み${a.confirmed ? '・社長確認済み' : ''}</span>`;
   if (a.status === 'approved') return a.form === 'trip' && a.phase === 1 ? '<span class="pill" style="color:var(--info)"><i></i>許可済み・報告待ち</span>' : '<span class="pill" style="color:var(--accent)"><i></i>承認済み</span>';
   return `<span class="pill" style="color:var(--gold)"><i></i>${a.phase === 2 ? '報告：' : ''}${a.awaitingMe ? 'あなたの承認待ち' : esc(a.cur) + ' 確認中'}</span>`;
 }
 function appRows(list){
-  return list.length ? `<div class="nlist">${list.map(a => `<button class="nitem" data-aopen="${esc(a.id)}"><span class="dot ${a.awaitingMe ? '' : 'read'}"></span><span style="min-width:0">
+  return list.length ? `<div class="nlist">${list.map(a => `<button class="nitem" data-aopen="${esc(a.id)}"><span class="dot ${a.awaitingMe || a.confirmMe ? '' : 'read'}"></span><span style="min-width:0">
     <span><span class="tag">${esc(a.t)}</span>${a.unprinted && isAdmin() ? '<span class="tag must">PDF未印刷</span>' : ''}</span>
     <span class="ntitle">${esc(a.subject)}</span>
     <span class="nmeta">${esc(a.by)}・${esc(a.dept)}・${esc(a.date)}${a.amount ? '・' + yen(a.amount) : ''}</span>
@@ -384,7 +386,7 @@ function applyList(){
   const ap = S.ap;
   if (!ap) return `<div class="card state"><b>読み込み中…</b></div>`;
   if (ap.status !== 'OK') return errorCard(ap.message || '申請を読み込めませんでした。');
-  const q = ap.apps.filter(a => a.awaitingMe), mine = ap.apps.filter(a => a.mine);
+  const q = ap.apps.filter(a => a.awaitingMe || a.confirmMe), mine = ap.apps.filter(a => a.mine);
   const tabs = [['queue', '承認待ち', q.length], ['mine', '自分の申請', mine.filter(a => a.status === 'returned').length || null], ['new', '新しく申請']].concat(isAdmin() ? [['all', 'すべて']] : []);
   let body;
   if (A.tab === 'new') body = `<div class="nlist">${FORMS.map(f => `<button class="nitem" data-aform="${f.k}"><span class="dot read"></span><span><span class="ntitle">${f.t}</span><span class="nmeta">${f.d}</span></span></button>`).join('')}</div>`;
@@ -417,6 +419,9 @@ function applyDetail(){
   const decide = d.awaitingMe ? `<div class="card"><h2 style="margin-bottom:10px">あなたの判断</h2><form class="form" id="dform">
       <label>コメント（差し戻し・条件付きのときは必須）<textarea name="comment" style="min-height:80px"></textarea></label>
       <div class="row"><button class="btn" type="submit" data-dec="ok">承認する</button><button class="btn ghost" type="submit" data-dec="cond">条件付きで承認</button><button class="btn danger" type="submit" data-dec="back">差し戻す</button></div></form></div>` : '';
+  const conf = d.confirmMe ? `<div class="card"><h2 style="margin-bottom:6px">社長の確認</h2><p class="nmeta" style="margin:0 0 10px">報告書は支配人の承認で完了しています。目を通したら確認の印を押してください。</p>
+      <form class="form" id="cform"><label>コメント（任意）<textarea name="comment" style="min-height:70px"></textarea></label>
+      <div class="row"><button class="btn" type="submit">確認しました（印を押す）</button></div></form></div>` : '';
   const trip = d.mine && d.form === 'trip' && d.status === 'approved' && d.phase === 1 ? `<div class="card"><h2 style="margin-bottom:10px">出張報告を書く</h2>
       ${d.reportBack ? `<div class="warnbox" style="margin-bottom:10px"><b>報告の差し戻し：</b>${esc(d.reportBack)}</div>` : ''}
       <form class="form" id="tform"><label>報告 <span class="req">必須</span><span class="hint">社名・面談者・内容・結果・課題等</span><textarea name="report" style="min-height:140px">${esc(d.report)}</textarea></label>
@@ -432,8 +437,9 @@ function applyDetail(){
   return `<div class="row" style="justify-content:space-between"><button class="back" data-act="aback">← 申請一覧</button><button class="btn ghost" data-act="aprint">印刷・PDFで保存</button></div>
     ${redo}<div class="paperwrap" id="paper">${d.paper}</div>
     <div class="card"><div class="card-h"><h2>承認の流れ</h2>${appPill(d)}</div><ol class="rlog">${d.route.map(s => `<li style="border-color:${s.now ? 'var(--gold)' : s.done.length && !s.skipped ? 'var(--accent)' : 'var(--line)'}">
-      <b>${esc(s.label)}${s.now ? '（確認中）' : ''}</b><span class="nmeta">${s.skipped ? '省略（同じ人が承認済み）' : esc(s.who.join(s.all ? '・' : ' / '))}${s.done.length && !s.skipped ? '　承認：' + esc(s.done.join('、')) : ''}</span></li>`).join('')}</ol></div>
-    ${decide}${trip}${buy}${pdfs}`;
+      <b>${esc(s.label)}${s.now ? '（確認中）' : ''}</b><span class="nmeta">${s.skipped ? '省略（同じ人が承認済み）' : esc(s.who.join(s.all ? '・' : ' / '))}${s.done.length && !s.skipped ? '　承認：' + esc(s.done.join('、')) : ''}</span></li>`).join('')}
+      ${d.confirm ? `<li style="border-color:${d.confirm.done.length ? 'var(--accent)' : 'var(--line)'};border-left-style:dashed"><b>${esc(d.confirm.label)}</b><span class="nmeta">${esc(d.confirm.who.join(' / ') || '未設定')}　${d.confirm.done.length ? '確認：' + esc(d.confirm.done.join('、')) : '任意（押さなくても完了）'}</span></li>` : ''}</ol></div>
+    ${decide}${conf}${trip}${buy}${pdfs}`;
 }
 
 /* ---------- 画面の切り替え ---------- */
@@ -509,7 +515,7 @@ document.addEventListener('change', async ev => {
 });
 document.addEventListener('submit', async ev => {
   const id = ev.target.id;
-  if (id === 'aform' || id === 'dform' || id === 'tform' || id === 'bform') {
+  if (id === 'aform' || id === 'dform' || id === 'tform' || id === 'bform' || id === 'cform') {
     ev.preventDefault(); if (S.busy) return;
     const f = new FormData(ev.target), btn = ev.submitter || ev.target.querySelector('[type=submit]'), label = btn.textContent;
     let action, v;
@@ -528,6 +534,8 @@ document.addEventListener('submit', async ev => {
       v = { id: A.open, decision: btn.dataset.dec, comment: String(f.get('comment') || '').trim() };
       if (v.decision !== 'ok' && !v.comment) { toast('コメントを入れてください'); return; }
       action = 'appDecide';
+    } else if (id === 'cform') {
+      v = { id: A.open, comment: String(f.get('comment') || '').trim() }; action = 'appConfirm';
     } else if (id === 'tform') {
       v = { id: A.open, report: String(f.get('report') || '').trim() }; if (!v.report) { toast('報告を入れてください'); return; } action = 'appReport';
     } else { v = { id: A.open, buyDate: f.get('buyDate'), deliverDate: f.get('deliverDate'), buyWhy: f.get('buyWhy') }; action = 'appBuy'; }
