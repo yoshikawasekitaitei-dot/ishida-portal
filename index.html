@@ -62,7 +62,7 @@ td{padding:9px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
 /* 下のメニュー */
 .tabbar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
 .tabbar[hidden]{display:none}
-.tabbar button{flex:1;min-width:0;max-width:240px;font:inherit;font-size:10.5px;letter-spacing:-.04em;white-space:nowrap;font-weight:700;background:none;border:0;color:var(--muted);padding:9px 0 10px;display:grid;justify-items:center;gap:2px;position:relative;cursor:pointer}
+.tabbar button{flex:1;min-width:0;max-width:240px;font:inherit;font-size:10px;letter-spacing:-.05em;white-space:nowrap;font-weight:700;background:none;border:0;color:var(--muted);padding:9px 0 10px;display:grid;justify-items:center;gap:2px;position:relative;cursor:pointer}
 .tabbar button[aria-current="page"]{color:var(--accent)}
 .tabbar svg{width:22px;height:22px}
 .badge{position:absolute;top:4px;left:calc(50% + 6px);background:var(--crit);color:#fff;border-radius:999px;font-size:10px;min-width:17px;height:17px;line-height:17px;padding:0 4px}
@@ -127,6 +127,37 @@ td{padding:9px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
 .pdfrow b{display:block;font-size:13px;overflow-wrap:anywhere}.pdfrow .nmeta{display:block}
 .pdf-ic{font-size:10px;font-weight:700;color:var(--crit);border:1.5px solid var(--crit);border-radius:4px;padding:2px 4px}
 @media (max-width:520px){.pdfrow{grid-template-columns:auto minmax(0,1fr)}.pdfrow .btn{grid-column:1/-1}}
+/* ホーム */
+.goalgrid{display:grid;gap:14px;margin-top:4px}
+.gstats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.gstats .stat{background:var(--surface2);border:0;text-align:left;padding:10px 12px}
+.gstats .stat b{display:block;font-size:18px;font-variant-numeric:tabular-nums}.gstats .stat span{font-size:11px;color:var(--muted)}
+.gbar{position:relative;height:10px;border-radius:999px;background:var(--surface2);margin:14px 0 6px}
+.gbar i{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:var(--accent)}
+.gbar b{position:absolute;top:-4px;bottom:-4px;width:3px;margin-left:-1px;background:var(--gold);border-radius:2px}
+.hword{display:flex;gap:12px;align-items:flex-start;border-left:4px solid var(--gold)}
+.wmark{flex:0 0 36px;height:36px;border-radius:50%;background:var(--gold-soft);color:var(--gold);display:grid;place-items:center;font-family:var(--display);font-weight:700}
+.wtext{font-family:var(--display);font-size:17px;line-height:1.7;margin:4px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.hgrid{display:grid;gap:14px}
+.hev{list-style:none;margin:4px 0 0;padding:0;display:grid;gap:4px}.hev li{display:grid;grid-template-columns:86px minmax(0,1fr);gap:6px;font-size:14px}
+.lnk{font:inherit;font-size:13px;font-weight:700;background:none;border:0;color:var(--accent);cursor:pointer;padding:0}
+.brand,.who,.tabbar .pc-only{display:none}
+/* パソコンなど広い画面：左にメニュー */
+@media (min-width:900px){
+  body{padding-left:232px}
+  main{max-width:980px;padding:32px 32px 48px}
+  .tabbar{top:0;bottom:0;right:auto;width:232px;flex-direction:column;justify-content:flex-start;border-top:0;border-right:1px solid var(--line);padding:24px 14px;gap:4px;overflow-y:auto}
+  .tabbar .brand{display:block;margin:0 8px 22px}.brand small{display:block;font-size:10px;letter-spacing:.18em;color:var(--muted)}.brand b{font-family:var(--display);font-size:20px;line-height:1.35}
+  .tabbar button,.tabbar .pc-only{display:flex;flex:0 0 auto;max-width:none;align-items:center;gap:12px;font-size:15px;letter-spacing:0;padding:11px 12px;border-radius:10px;text-align:left;color:var(--fg);font-weight:500}
+  .tabbar button[aria-current="page"]{background:var(--accent-soft);color:var(--accent);font-weight:700}
+  .tabbar button:hover{background:var(--surface2)}
+  .tabbar svg{width:20px;height:20px;flex:0 0 20px}
+  .tabbar .badge{position:static;margin-left:auto;order:3}
+  .tabbar .who{display:grid;margin-top:auto;padding:14px 8px 0;border-top:1px solid var(--line)}.who b{font-size:14px}.who span{font-size:12px;color:var(--muted)}
+  .goalgrid{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);align-items:center}
+  .hgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  h1{font-size:26px}.big{font-size:52px}
+}
 .wdoc{overflow-wrap:anywhere;line-height:1.75}
 .wtitle{font-size:21px;margin:8px 0 12px;line-height:1.4}
 .wdoc h1{font-size:20px;margin:18px 0 8px}.wdoc h2{font-size:18px;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--line)}
@@ -228,7 +259,7 @@ function errorCard(msg){
 function showError(msg){ $app.innerHTML = errorCard(msg); }
 
 /* ---------- お知らせ ---------- */
-const S = { tab: 'notice', sales: null, nb: null, rp: null, ap: null, open: null, compose: false, busy: false };
+const S = { tab: 'home', sales: null, nb: null, rp: null, ap: null, open: null, compose: false, busy: false };
 const unreadCount = () => S.nb && S.nb.notices ? S.nb.notices.filter(n => !n.read).length : 0;
 const isAdmin = () => !!((S.nb && S.nb.role === 'admin') || (S.sales && S.sales.role === 'admin'));
 
@@ -653,6 +684,69 @@ async function openWiki(id){
   if (S.tab === 'wiki') draw();
 }
 
+/* ---------- ホーム ---------- */
+const H = { data: null, editGoal: false, editWord: false, busy: false };
+const man = n => n >= 1e4 ? Math.round(n / 1e4).toLocaleString('ja-JP') : (n / 1e4).toFixed(1);
+function goalCard(h){
+  const g = h.goal, admin = h.role === 'admin';
+  const form = `<form class="form" id="hgoal" style="margin-top:12px"><label>${h.month}月の付帯売上の目標（円）<input name="amount" inputmode="numeric" required value="${g.amount || ''}" placeholder="例：2500000"></label>
+    <div class="row"><button class="btn" type="submit">保存する</button>${g.amount ? '<button class="btn ghost" type="button" data-act="hgoalx">やめる</button>' : ''}</div></form>`;
+  if (!g.amount) return `<div class="card"><div class="card-h"><h2>${h.month}月の付帯売上の目標</h2><span class="scope">全員に表示</span></div>
+    <p class="note" style="margin:0">今月の目標はまだ入っていません。${admin ? '' : '管理者が入力すると、ここに残りが表示されます。'}</p>${admin ? form : ''}</div>`;
+  if (g.actual == null) return `<div class="card"><h2>${h.month}月の付帯売上の目標</h2><p class="note">売上表を読み込めませんでした。${esc(g.error || '')}</p></div>`;
+  const rest = Math.max(0, g.amount - g.actual), rate = g.actual / g.amount;
+  const done = g.lastDay || Math.max(h.today - 1, 0), left = Math.max(h.days - done, 0);
+  const pace = done / h.days, perDay = left ? rest / left : 0;
+  const st = rate >= 1 ? ['達成', 'var(--accent)'] : rate >= pace ? ['順調', 'var(--accent)'] : rate >= pace * 0.9 ? ['あと少し', 'var(--gold)'] : ['巻き返し', 'var(--crit)'];
+  const cheer = rate >= 1 ? '目標達成です。ここからの上積みも大切に。' : rate >= pace ? '目標に向けて順調です。この調子で一日一日を丁寧に。'
+    : rate >= pace * 0.9 ? '目安まであと少し。おすすめの一言を、もう一組に。' : '目安より遅れています。みんなで声をかけ合っていきましょう。';
+  return `<div class="card goal"><div class="card-h"><span class="eyebrow">${h.month}月の付帯売上の目標まで あと</span><span class="scope">全員に表示</span></div>
+    <div class="goalgrid"><div>
+      <div class="big">${rest ? man(rest) : '0'}<small style="font-size:18px"> 万円</small></div>
+      <div class="eyebrow">目標 ${man(g.amount)}万円 ／ ${done ? `${h.month}月${done}日までの` : ''}累計 ${man(g.actual)}万円</div>
+      <div class="gbar" role="img" aria-label="達成率${(rate * 100).toFixed(1)}%、今日時点の目安${(pace * 100).toFixed(1)}%"><i style="width:${Math.min(rate, 1) * 100}%"></i><b style="left:${Math.min(pace, 1) * 100}%"></b></div>
+      <div class="row" style="justify-content:space-between;font-size:12px"><span class="eyebrow">達成率 ${(rate * 100).toFixed(1)}%</span><span style="color:var(--gold)">｜ 今日時点の目安 ${(pace * 100).toFixed(1)}%</span></div>
+    </div><div class="gstats">
+      <div class="stat"><b>${left}日</b><span>今月の残り日数</span></div>
+      <div class="stat"><b>${left ? man(perDay) + '万円' : '—'}</b><span>1日あたりの目安</span></div>
+      <div class="stat"><b>${(rate * 100).toFixed(1)}%</b><span>現在の達成率</span></div>
+      <div class="stat"><b style="color:${st[1]}">${st[0]}</b><span>目安との比較</span></div>
+    </div></div>
+    <div class="cheer">${cheer}</div>
+    ${g.parts ? `<p class="note">内訳：飲料 ${yen(g.parts.drink)}・別注 ${yen(g.parts.betsu)}・エステ ${yen(g.parts.este)}（${esc(g.updatedAt)} 時点）</p>` : ''}
+    ${admin ? (H.editGoal ? form : `<div class="row" style="margin-top:12px"><button class="btn ghost" data-act="hgoal">目標の数字を更新する</button></div>`) : ''}</div>`;
+}
+function homeView(){
+  const h = H.data;
+  if (!h) return `<div class="card state"><b>読み込み中…</b></div>`;
+  if (h.status !== 'OK') return errorCard(h.message || 'ホームを読み込めませんでした。');
+  const u = unreadCount(), ab = appBadge();
+  const word = h.word ? `<div class="card hword"><span class="wmark">${esc((h.word.by || '').charAt(0))}</span><div style="min-width:0">
+      <div class="eyebrow">${esc(h.word.by)}より 今日のひとこと${h.word.at ? `・${esc(h.word.at)}` : ''}</div><p class="wtext">${esc(h.word.text)}</p></div></div>` : '';
+  const wform = `<form class="form card" id="hword"><label>今日のひとこと（200文字まで）<textarea name="text" maxlength="200" required style="min-height:80px" placeholder="例：紅葉の見頃が近づいてきました。お客様に「今がいちばん」の景色を、一言添えてお伝えしましょう。"></textarea></label>
+    <div class="row"><button class="btn" type="submit">載せる</button><button class="btn ghost" type="button" data-act="hwordx">やめる</button></div></form>`;
+  const todo = [];
+  if (u) todo.push(`<button class="nitem" data-go="notice"><span class="dot"></span><span><span class="ntitle">未確認のお知らせ ${u}件</span><span class="nmeta">押すとお知らせを開きます</span></span></button>`);
+  if (ab) todo.push(`<button class="nitem" data-go="apply"><span class="dot"></span><span><span class="ntitle">申請で対応が必要なもの ${ab}件</span><span class="nmeta">承認・確認・差し戻しの直し</span></span></button>`);
+  const ev = h.events, evList = (l) => l && l.length ? `<ul class="hev">${l.slice(0, 6).map(e => `<li><span class="nmeta">${esc(e.time)}</span>${esc(e.title)}</li>`).join('')}${l.length > 6 ? `<li class="nmeta">ほか ${l.length - 6}件</li>` : ''}</ul>` : '<p class="note" style="margin:4px 0 0">予定はありません</p>';
+  return `<header><small>SEKITEI ISHIDA</small><h1>おつかれさまです、${esc(h.name)}さん。</h1><p class="sub">${esc(h.date)}　未確認のお知らせ ${u}件</p></header>
+    ${H.editWord ? wform : word}
+    ${h.canWord && !H.editWord ? `<div><button class="btn ghost" data-act="hword">${h.word ? 'ひとことを書き直す' : '＋ 今日のひとことを書く'}</button></div>` : ''}
+    ${todo.length ? `<div class="card"><h2 style="margin-bottom:4px">やること</h2><div class="nlist">${todo.join('')}</div></div>` : ''}
+    ${goalCard(h)}
+    <div class="hgrid">
+      <div class="card"><div class="card-h"><h2>今日・明日の予定</h2><button class="lnk" data-go="cal">予定を見る →</button></div>
+        ${ev ? `<div class="eyebrow" style="margin-top:6px">今日</div>${evList(ev.today)}<div class="eyebrow" style="margin-top:10px">明日</div>${evList(ev.tomorrow)}` : '<p class="note">予定を読み込めませんでした。</p>'}</div>
+      <div class="card"><div class="card-h"><h2>接客部の付帯売上</h2><button class="lnk" data-go="sales">${h.role === 'admin' ? 'ランキングを見る' : '自分の数字を見る'} →</button></div>
+        <p class="note" style="margin:6px 0 0">飲料・別注・エステの、今月の数字を見られます。</p>
+        <div class="card-h" style="margin-top:14px"><h2>今の出勤状況</h2><button class="lnk" data-go="members">メンバーを見る →</button></div></div>
+    </div>`;
+}
+async function loadHome(){
+  try { H.data = await call('home', {}, 'raw'); } catch (e) { H.data = { status: 'ERROR', message: (e && e.message) || String(e) }; }
+  if (S.tab === 'home') draw();
+}
+
 const ICON = {
   notice: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>',
   apply: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15l2 2 4-4"/></svg>',
@@ -660,20 +754,21 @@ const ICON = {
   members: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
   cal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
   wiki: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/></svg>',
+  home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>',
   sales: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15v2M12 10v7M17 6v11"/></svg>',
 };
 function draw(){
   const tb = document.getElementById('tabbar');
   tb.hidden = false;
   const u = unreadCount();
-  tb.innerHTML = `<button data-tab="notice" aria-current="${S.tab === 'notice' ? 'page' : 'false'}">${ICON.notice}${u ? `<span class="badge">${u}</span>` : ''}お知らせ</button>
-    <button data-tab="apply" aria-current="${S.tab === 'apply' ? 'page' : 'false'}">${ICON.apply}${appBadge() ? `<span class="badge">${appBadge()}</span>` : ''}申請</button>
-    <button data-tab="repair" aria-current="${S.tab === 'repair' ? 'page' : 'false'}">${ICON.repair}修繕</button>
-    <button data-tab="members" aria-current="${S.tab === 'members' ? 'page' : 'false'}">${ICON.members}メンバー</button>
-    <button data-tab="cal" aria-current="${S.tab === 'cal' ? 'page' : 'false'}">${ICON.cal}予定</button>
-    <button data-tab="wiki" aria-current="${S.tab === 'wiki' ? 'page' : 'false'}">${ICON.wiki}マニュアル</button>
-    <button data-tab="sales" aria-current="${S.tab === 'sales' ? 'page' : 'false'}">${ICON.sales}数字</button>`;
+  const nav = [['home', 'ホーム', ''], ['notice', 'お知らせ', u], ['apply', '申請', appBadge()], ['repair', '修繕', ''], ['members', 'メンバー', ''],
+    ['cal', '予定', ''], ['wiki', 'マニュアル', ''], ['sales', '数字', '']];
+  const me = (H.data && H.data.name) || (S.nb && S.nb.displayName) || '';
+  tb.innerHTML = `<div class="brand"><small>SEKITEI ISHIDA</small><b>石苔亭いしだ<br>社内ポータル</b></div>` +
+    nav.map(n => `<button data-tab="${n[0]}" class="${n[0] === 'sales' ? 'pc-only' : ''}" aria-current="${S.tab === n[0] ? 'page' : 'false'}">${ICON[n[0]]}${n[2] ? `<span class="badge">${n[2]}</span>` : ''}<span class="lbl">${n[1]}</span></button>`).join('') +
+    `<div class="who">${me ? `<b>${esc(me)}</b><span>${isAdmin() ? '管理者' : ''}</span>` : ''}</div>`;
   if (S.tab === 'sales') { $app.innerHTML = salesView(S.sales); return; }
+  if (S.tab === 'home') { $app.innerHTML = homeView(); return; }
   if (S.tab === 'members') { $app.innerHTML = membersView(); return; }
   if (S.tab === 'wiki') { $app.innerHTML = W.open ? wikiDoc() : wikiView(); return; }
   if (S.tab === 'cal') { $app.innerHTML = C.add ? calAdd() : calView(); return; }
@@ -692,8 +787,9 @@ function toast(t){ const el = document.getElementById('toast'); el.textContent =
 
 document.addEventListener('click', async ev => {
   const t = ev.target.closest('button'); if (!t) return;
-  if (t.dataset.tab) { S.tab = t.dataset.tab; S.open = null; S.compose = false; R.open = null; R.add = false; draw(); window.scrollTo(0, 0);
+  if (t.dataset.tab || t.dataset.go) { S.tab = t.dataset.tab || t.dataset.go; S.open = null; S.compose = false; R.open = null; R.add = false; draw(); window.scrollTo(0, 0);
     if (S.tab === 'apply' && !S.ap) call('apps').catch(e => { S.ap = { status: 'ERROR', message: (e && e.message) || String(e) }; draw(); });
+    if (S.tab === 'home') loadHome();
     if (S.tab === 'members') { M.at = Date.now(); loadMembers(M.day, true); }
     if (S.tab === 'wiki') { W.open = null; loadWiki(); }
     if (S.tab === 'cal') { C.add = false; if (!C.ym) C.ym = ymOf(new Date()); loadCal(C.ym, true); }
@@ -731,6 +827,10 @@ document.addEventListener('click', async ev => {
   if (a === 'aback') { if (A.form && A.edit) { A.form = null; A.edit = null; } else if (A.form) { A.form = null; A.tab = 'new'; } else A.open = null; draw(); return; }
   if (a === 'aredo') { const d = S.ap.detail; A.edit = d; A.form = d.form; draw(); window.scrollTo(0, 0); return; }
   if (a === 'aprint') { window.print(); return; }
+  if (a === 'hgoal') { H.editGoal = true; draw(); return; }
+  if (a === 'hgoalx') { H.editGoal = false; draw(); return; }
+  if (a === 'hword') { H.editWord = true; draw(); return; }
+  if (a === 'hwordx') { H.editWord = false; draw(); return; }
   if (a === 'wback') { W.open = null; draw(); return; }
   if (a === 'wclear') { W.q = ''; W.hits = null; draw(); return; }
   if (a === 'caddopen') { C.add = true; draw(); window.scrollTo(0, 0); return; }
@@ -754,6 +854,14 @@ document.addEventListener('change', async ev => {
 });
 document.addEventListener('submit', async ev => {
   const id = ev.target.id;
+  if (id === 'hgoal' || id === 'hword') {
+    ev.preventDefault(); if (H.busy) return; H.busy = true;
+    const f = new FormData(ev.target), btn = ev.target.querySelector('[type=submit]'); btn.disabled = true;
+    try { const j = await call(id === 'hgoal' ? 'homeGoal' : 'homeWord', id === 'hgoal' ? { amount: f.get('amount'), ym: H.data && H.data.ym } : { text: f.get('text') }, 'raw');
+      H.data = j; H.editGoal = false; H.editWord = false; draw(); toast(j.message); }
+    catch (e) { toast(e.message); btn.disabled = false; }
+    H.busy = false; return;
+  }
   if (id === 'wsearch') {
     ev.preventDefault(); const q = String(new FormData(ev.target).get('q') || '').trim();
     if (!q) { W.q = ''; W.hits = null; draw(); return; }
@@ -890,7 +998,16 @@ const DEMO_WIKI = { status: 'OK', role: DEMO.role, cats: ['共通', 'フロン�
   { id: 'w1', title: 'ポータルの使い方', cat: '共通', upd: '10月17日', t: 3, isNew: true },
   { id: 'w2', title: 'チェックインの流れ', cat: 'フロント・予約', upd: '10月2日', t: 2, isNew: false },
   { id: 'w3', title: 'お茶出しの手順', cat: '接客', upd: '9月20日', t: 1, isNew: false }] };
+const DEMO_HOME = { status: 'OK', role: DEMO.role, name: DEMO.role === 'admin' ? '見本 支配人' : '見本 花子', canWord: DEMO.role === 'admin', ym: '2026-10', month: 10, days: 31, today: 17, date: '10月17日（土）', message: '',
+  goal: { amount: 2500000, actual: 1180000, lastDay: 16, updatedAt: '10月17日 9:00', parts: { drink: 820000, betsu: 290000, este: 70000 } },
+  word: { text: '紅葉の見頃が近づいてきました。お客様に「今がいちばん」の景色を、一言添えてお伝えしましょう。', by: '見本 支配人', at: '10月17日 8:30' },
+  events: { today: [{ title: '増売会議', time: '終日' }, { title: '見本 来館', time: '終日' }], tomorrow: [{ title: '見本 来館', time: '終日' }] } };
 function demoCall(action, x){
+  if (action.indexOf('home') === 0) {
+    if (action === 'homeGoal') { DEMO_HOME.goal.amount = Number(String(x.amount).replace(/[^\d]/g, '')); DEMO_HOME.message = '目標を保存しました。'; }
+    if (action === 'homeWord') { DEMO_HOME.word = { text: x.text, by: DEMO_HOME.name, at: 'たった今' }; DEMO_HOME.message = 'ひとことを載せました。'; }
+    return JSON.parse(JSON.stringify(DEMO_HOME));
+  }
   if (action === 'wiki') return DEMO_WIKI;
   if (action === 'wikiSearch') return { status: 'OK', hits: x.q.indexOf('茶') >= 0 ? ['w3'] : [] };
   if (action === 'wikiGet') return { status: 'OK', doc: DEMO_WIKI.docs.find(d => d.id === x.id), editUrl: DEMO.role === 'admin' ? '#' : '',
@@ -920,13 +1037,14 @@ async function start(){
   if (DEMO_MODE) {
     if (DEMO.role !== 'admin') { delete DEMO.ranking; DEMO_NB.notices.forEach(n => { delete n.readers; delete n.unread; }); }
     else delete DEMO.me;
-    S.sales = DEMO; S.nb = DEMO_NB; S.rp = DEMO_RP; draw(); return;
+    S.sales = DEMO; S.nb = DEMO_NB; S.rp = DEMO_RP; call('apps').catch(() => {}); draw(); loadHome(); return;
   }
   try {
     await woff.init({ woffId: WOFF_ID });
     if (!woff.isLoggedIn()) { woff.login(); return; }   // LINE WORKS アプリの外で開いたとき
     TOKEN = woff.getAccessToken();
     draw();
+    loadHome();
     // お知らせと数字を同時に読み込む
     const pSales = fetch(API_URL + '?token=' + encodeURIComponent(TOKEN)).then(r => r.json())
       .catch(e => ({ status: 'ERROR', message: (e && e.message) || String(e) }));
