@@ -127,6 +127,9 @@ td{padding:9px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
 .pdfrow b{display:block;font-size:13px;overflow-wrap:anywhere}.pdfrow .nmeta{display:block}
 .pdf-ic{font-size:10px;font-weight:700;color:var(--crit);border:1.5px solid var(--crit);border-radius:4px;padding:2px 4px}
 @media (max-width:520px){.pdfrow{grid-template-columns:auto minmax(0,1fr)}.pdfrow .btn{grid-column:1/-1}}
+.mtl{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:6px;margin-top:8px}
+.mtl span{display:grid;gap:1px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:12px}
+.mtl small{color:var(--muted);font-size:11px}
 @media print{body *{visibility:hidden}#paper,#paper *{visibility:visible}#paper{position:absolute;left:0;top:0;width:100%;border:0}.tabbar{display:none}}
 </style>
 </head>
@@ -443,10 +446,78 @@ function applyDetail(){
 }
 
 /* ---------- 画面の切り替え ---------- */
+
+/* ---------- メンバー（出勤状況） ---------- */
+const M = { day: 'today', filter: 'all', data: {}, open: null };
+const MCOL = { '出勤中': 'var(--accent)', '中抜け': 'var(--gold)', '出勤前': 'var(--info)', '退勤': 'var(--muted)', '休み': 'var(--muted)', '予定なし': 'var(--muted)', '出勤': 'var(--info)' };
+const tm = m => { m = ((m % 1440) + 1440) % 1440; return Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0'); };
+/* 「11:59まで」は「12:00まで」と見せる（シフト表は終わりの1分前で書いてある） */
+const segsOf = ps => { const out = []; ps.forEach(p => { const l = out[out.length - 1]; if (l && p.s - l.e <= 1) l.e = p.e; else out.push({ s: p.s, e: p.e }); }); return out; };
+function mState(p, live){
+  if (!p.periods.length) return { st: p.pat ? '休み' : '予定なし', note: p.pat === '休み' ? '' : p.pat };
+  const sg = segsOf(p.periods);
+  if (!live) return { st: '出勤', note: '' };
+  const d = new Date(), n = d.getHours() * 60 + d.getMinutes();
+  const now = n;
+  const cur = p.periods.find(x => now >= x.s && now <= x.e);
+  if (cur) { const s = sg.find(x => now >= x.s && now <= x.e); return { st: '出勤中', pos: cur.pos, note: tm(s.e + 1) + 'まで' }; }
+  if (now < sg[0].s) return { st: '出勤前', note: tm(sg[0].s) + 'から' };
+  const next = sg.find(x => x.s > now);
+  if (next) return { st: '中抜け', note: tm(next.s) + 'に戻り' };
+  return { st: '退勤', note: tm(sg[sg.length - 1].e + 1) + 'に退勤' };
+}
+const mPill = st => `<span class="pill" style="color:${MCOL[st] || 'var(--muted)'}"><i></i>${esc(st)}</span>`;
+
+function membersView(){
+  const d = M.data[M.day];
+  const dayChips = `<div class="fchips">${[['today', '今日'], ['tomorrow', '明日']].map(t => `<button class="fchip" data-mday="${t[0]}" aria-pressed="${M.day === t[0]}">${t[1]}</button>`).join('')}</div>`;
+  const head = `<header><small>SEKITEI ISHIDA</small><h1>メンバー</h1><p class="sub">シフト表から、${M.day === 'today' ? '今' : '明日'}の出勤状況を表示しています。</p></header>`;
+  if (!d) return head + dayChips + `<div class="card state"><b>読み込み中…</b></div>`;
+  if (d.status !== 'OK') return head + dayChips + errorCard(d.message || 'シフト表を読み込めませんでした。');
+  const title = `<div class="card"><div class="row" style="justify-content:space-between;align-items:baseline"><h2>${esc(d.date)}（${esc(d.wd)}）</h2><span class="nmeta">${esc(d.updatedAt)} 時点</span></div>
+    ${d.plan ? `<p class="nbody" style="margin:6px 0 0">予定：${esc(d.plan)}</p>` : ''}
+    ${d.counts && d.counts.length ? `<div class="row" style="margin-top:8px;flex-wrap:wrap;gap:6px">${d.counts.map(c => `<span class="tag">${esc(c.label)} ${esc(c.g)}組 ${esc(c.n)}名</span>`).join('')}</div>` : ''}</div>`;
+  if (d.missing) return head + dayChips + title + `<div class="card"><p class="note" style="margin:0">${d.missing === 'file'
+    ? 'この月のシフト表（例：R8.10シフト）が見つかりません。シフト表が作られているか、管理者に確認してください。'
+    : `シフト表に「${esc(d.sheet)}」のシートがまだありません。シフトが出たら表示されます。`}</p></div>`;
+  const live = M.day === 'today';
+  const list = d.people.map(p => Object.assign({ p: p }, mState(p, live)));
+  const order = live ? ['出勤中', '中抜け', '出勤前', '退勤', '休み', '予定なし'] : ['出勤', '休み', '予定なし'];
+  const cnt = st => list.filter(x => x.st === st).length;
+  if (order.indexOf(M.filter) < 0) M.filter = 'all';
+  const shown = M.filter === 'all' ? list : list.filter(x => x.st === M.filter);
+  const groups = []; shown.forEach(x => { let g = groups.find(y => y.name === x.p.group); if (!g) groups.push(g = { name: x.p.group, rows: [] }); g.rows.push(x); });
+  const chip = (k, l, n) => `<button class="fchip" data-mf="${k}" aria-pressed="${M.filter === k}">${l}${n != null ? ` ${n}` : ''}</button>`;
+  const row = x => {
+    const p = x.p, me = p.key === d.me, open = M.open === p.key;
+    const sg = segsOf(p.periods);
+    return `<button class="nitem" data-mopen="${esc(p.key)}" aria-expanded="${open}"><span class="dot read"></span><span style="min-width:0;flex:1">
+      <span class="row" style="justify-content:space-between;gap:8px"><span class="ntitle" style="margin:0">${esc(p.name)}${me ? ' <span class="tag">自分</span>' : ''}</span>${mPill(x.st)}</span>
+      <span class="nmeta">${x.pos ? `<b>${esc(x.pos)}</b>・` : ''}${esc(x.note || '')}${sg.length ? `${x.note ? '　' : ''}${sg.map(s => tm(s.s) + '〜' + tm(s.e + 1)).join(' / ')}` : ''}${p.pat && p.periods.length ? `（${esc(p.pat)}）` : ''}</span>
+      ${open && p.periods.length ? `<span class="mtl">${p.periods.map(q => `<span><b>${esc(q.p)}</b>${esc(q.pos || '—')}<small>${tm(q.s)}〜${tm(q.e + 1)}</small></span>`).join('')}</span>` : ''}
+    </span></button>`;
+  };
+  return head + dayChips + title +
+    `<div class="rsum">${order.slice(0, 4).filter(st => live || st !== '予定なし').map(st => `<div class="stat"><b style="color:${MCOL[st]}">${cnt(st)}人</b><span>${st}</span></div>`).join('')}</div>
+    <div class="fchips">${chip('all', 'すべて', list.length)}${order.filter(st => cnt(st)).map(st => chip(st, st, cnt(st))).join('')}</div>
+    ${groups.length ? groups.map(g => `<div class="card"><h2 style="margin-bottom:6px">${esc(g.name || 'その他')}</h2><div class="nlist">${g.rows.map(row).join('')}</div></div>`).join('')
+      : `<div class="card"><p class="note" style="margin:0">該当する人はいません。</p></div>`}
+    <p class="note">名前を押すと、時間帯ごとの持ち場が見られます。シフト表の変更は2分ほどで反映されます。</p>`;
+}
+async function loadMembers(day, force){
+  if (M.data[day] && !force) return;
+  try { M.data[day] = await call('members', { day: day }, 'raw'); }
+  catch (e) { M.data[day] = { status: 'ERROR', message: (e && e.message) || String(e) }; }
+  if (S.tab === 'members') draw();
+}
+/* 今日の画面を開いている間は、1分ごとに状態を描き直し、5分ごとに読み直す */
+setInterval(() => { if (S.tab === 'members' && M.day === 'today' && !document.hidden) { if (Date.now() - (M.at || 0) > 3e5) { M.at = Date.now(); loadMembers('today', true); } else draw(); } }, 60000);
+
 const ICON = {
   notice: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>',
   apply: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15l2 2 4-4"/></svg>',
   repair: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>',
+  members: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
   sales: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15v2M12 10v7M17 6v11"/></svg>',
 };
 function draw(){
@@ -456,8 +527,10 @@ function draw(){
   tb.innerHTML = `<button data-tab="notice" aria-current="${S.tab === 'notice' ? 'page' : 'false'}">${ICON.notice}${u ? `<span class="badge">${u}</span>` : ''}お知らせ</button>
     <button data-tab="apply" aria-current="${S.tab === 'apply' ? 'page' : 'false'}">${ICON.apply}${appBadge() ? `<span class="badge">${appBadge()}</span>` : ''}申請</button>
     <button data-tab="repair" aria-current="${S.tab === 'repair' ? 'page' : 'false'}">${ICON.repair}修繕</button>
+    <button data-tab="members" aria-current="${S.tab === 'members' ? 'page' : 'false'}">${ICON.members}メンバー</button>
     <button data-tab="sales" aria-current="${S.tab === 'sales' ? 'page' : 'false'}">${ICON.sales}今月の数字</button>`;
   if (S.tab === 'sales') { $app.innerHTML = salesView(S.sales); return; }
+  if (S.tab === 'members') { $app.innerHTML = membersView(); return; }
   if (S.tab === 'apply') { $app.innerHTML = A.form ? applyForm() : A.open ? applyDetail() : applyList(); return; }
   if (S.tab === 'repair') {
     const r = R.open && S.rp && S.rp.repairs && S.rp.repairs.find(x => x.id === R.open);
@@ -475,9 +548,13 @@ document.addEventListener('click', async ev => {
   const t = ev.target.closest('button'); if (!t) return;
   if (t.dataset.tab) { S.tab = t.dataset.tab; S.open = null; S.compose = false; R.open = null; R.add = false; draw(); window.scrollTo(0, 0);
     if (S.tab === 'apply' && !S.ap) call('apps').catch(e => { S.ap = { status: 'ERROR', message: (e && e.message) || String(e) }; draw(); });
+    if (S.tab === 'members') { M.at = Date.now(); loadMembers(M.day, true); }
     if (S.tab === 'repair' && !S.rp) call('repairs').catch(e => { S.rp = { status: 'ERROR', message: (e && e.message) || String(e) }; draw(); });
     return; }
   if (t.dataset.atab) { A.tab = t.dataset.atab; draw(); return; }
+  if (t.dataset.mday) { M.day = t.dataset.mday; M.filter = 'all'; M.open = null; draw(); loadMembers(M.day, M.day === 'today'); return; }
+  if (t.dataset.mf) { M.filter = t.dataset.mf; draw(); return; }
+  if (t.dataset.mopen) { M.open = M.open === t.dataset.mopen ? null : t.dataset.mopen; draw(); return; }
   if (t.dataset.aform) { A.form = t.dataset.aform; A.edit = null; draw(); window.scrollTo(0, 0); return; }
   if (t.dataset.aopen) { A.open = t.dataset.aopen; draw(); window.scrollTo(0, 0); call('appGet', { id: A.open }).catch(e => toast(e.message)); return; }
   if (t.dataset.printed && S.tab === 'apply') { if (S.busy) return; S.busy = true; try { await call('appPrinted', { id: A.open, idx: +t.dataset.printed }); toast(S.ap.message); } catch (e) { toast(e.message); } S.busy = false; return; }
@@ -619,7 +696,15 @@ const DEMO_RP = { status: 'OK', canManage: DEMO.role === 'admin', places: ['客�
   { id: 'r2', by: '見本 花子', found: '10月8日 7:20', place: '庭・外回り', detail: '正面玄関前の飛び石', what: '飛び石が1枚ぐらついている。つまずきそうで危ない。', st: '未対応', vendor: '', due: '', done: '', overdue: false, hasPhoto: false, log: [['10/8 7:25', '見本 花子', '未対応で登録']] },
   { id: 'r1', by: '見本 太郎', found: '10月6日 15:00', place: 'ロビー・能舞台', detail: '能舞台 下手側の照明', what: 'スポットライトが1灯つかない。', st: '対応中', vendor: '', due: '2026-10-07', done: '', overdue: true, hasPhoto: false, log: [['10/6 15:05', '見本 太郎', '未対応で登録'], ['10/6 16:00', '見本 支配人', '対応中に変更']] },
 ] };
+const DEMO_MB = (() => { const P = (n, g, pat, ps) => ({ name: n, key: n.replace(/\s/g, ''), group: g, pat: pat, periods: ps.map(a => ({ p: a[0], s: a[1], e: a[2], pos: a[3] })) });
+  const full = [['朝', 420, 599, 'フロント'], ['C/out', 600, 719, 'フロント'], ['昼', 720, 869, '喫茶'], ['C/in', 870, 1079, 'フロント'], ['夜', 1080, 1289, 'フロント']];
+  return { status: 'OK', date: '10月17日', wd: '土', updatedAt: '10:05', plan: '見本 来館', counts: [{ label: 'IN', g: '14', n: '38' }], missing: '', me: '見本花子', people: [
+    P('見本 花子', '事務所フロント', 'R', [['C/out', 660, 719, '事務所'], ['昼', 720, 869, '事務所'], ['C/in', 870, 1079, '事務所'], ['夜', 1080, 1289, '事務所']]),
+    P('見本A', '事務所フロント', 'Q', full.slice(0, 4)), P('見本B', '事務所フロント', '休み', []), P('見本C', '事務所フロント', '希望休', []),
+    P('見本D', '和', 'A', [['朝', 420, 599, '和'], ['C/in', 870, 1079, '和'], ['夜', 1080, 1289, '和']]), P('見本E', '和', 'A', [['朝', 420, 599, '和'], ['C/in', 870, 1079, '和'], ['夜', 1080, 1289, '和']]),
+    P('見本F', '洗い場パート', '夕', [['夜', 1080, 1259, '洗い場']]), P('見本G', '洗い場パート', '休み', [])] }; })();
 function demoCall(action, x){
+  if (action === 'members') return Object.assign({}, DEMO_MB, x.day === 'tomorrow' ? { date: '10月18日', wd: '日', plan: '', counts: [], people: DEMO_MB.people.slice().reverse() } : {});
   if (action.indexOf('repair') === 0) {
     const r = DEMO_RP.repairs.find(y => y.id === x.id);
     if (action === 'repairPhoto') return { status: 'OK', photo: null };
