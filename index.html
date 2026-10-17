@@ -62,7 +62,7 @@ td{padding:9px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
 /* 下のメニュー */
 .tabbar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
 .tabbar[hidden]{display:none}
-.tabbar button{flex:1;min-width:0;max-width:240px;font:inherit;font-size:11px;letter-spacing:-.02em;white-space:nowrap;font-weight:700;background:none;border:0;color:var(--muted);padding:9px 0 10px;display:grid;justify-items:center;gap:2px;position:relative;cursor:pointer}
+.tabbar button{flex:1;min-width:0;max-width:240px;font:inherit;font-size:10.5px;letter-spacing:-.04em;white-space:nowrap;font-weight:700;background:none;border:0;color:var(--muted);padding:9px 0 10px;display:grid;justify-items:center;gap:2px;position:relative;cursor:pointer}
 .tabbar button[aria-current="page"]{color:var(--accent)}
 .tabbar svg{width:22px;height:22px}
 .badge{position:absolute;top:4px;left:calc(50% + 6px);background:var(--crit);color:#fff;border-radius:999px;font-size:10px;min-width:17px;height:17px;line-height:17px;padding:0 4px}
@@ -127,6 +127,17 @@ td{padding:9px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
 .pdfrow b{display:block;font-size:13px;overflow-wrap:anywhere}.pdfrow .nmeta{display:block}
 .pdf-ic{font-size:10px;font-weight:700;color:var(--crit);border:1.5px solid var(--crit);border-radius:4px;padding:2px 4px}
 @media (max-width:520px){.pdfrow{grid-template-columns:auto minmax(0,1fr)}.pdfrow .btn{grid-column:1/-1}}
+.wdoc{overflow-wrap:anywhere;line-height:1.75}
+.wtitle{font-size:21px;margin:8px 0 12px;line-height:1.4}
+.wdoc h1{font-size:20px;margin:18px 0 8px}.wdoc h2{font-size:18px;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--line)}
+.wdoc h3{font-size:16px;margin:16px 0 6px}.wdoc h4,.wdoc h5{font-size:15px;margin:14px 0 4px}
+.wdoc p{margin:0 0 8px}.wdoc .wsp{height:4px;margin:0}
+.wdoc ul,.wdoc ol{margin:0 0 10px;padding-left:1.4em}.wdoc li{margin:2px 0}
+.wdoc img{max-width:100%;height:auto;border-radius:8px;display:block;margin:8px 0}
+.wdoc a{color:var(--info)}.wdoc hr{border:0;border-top:1px solid var(--line);margin:14px 0}
+.wtbl{overflow-x:auto;margin:8px 0 12px}.wdoc table{border-collapse:collapse;font-size:13px;min-width:100%}
+.wdoc th,.wdoc td{border:1px solid var(--line);padding:6px 8px;vertical-align:top;text-align:left}.wdoc th{background:var(--bg)}
+.wnote{color:var(--muted);font-size:12px}
 .cgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
 .cwd{font-size:11px;color:var(--muted);padding:2px 0 4px}
 .cday{font:inherit;background:none;border:0;border-radius:8px;padding:5px 0 3px;display:grid;justify-items:center;gap:0;cursor:pointer;color:var(--ink,inherit);min-width:0}
@@ -599,12 +610,56 @@ async function loadCal(ym, force){
   if (S.tab === 'cal') draw();
 }
 
+/* ---------- マニュアル（Googleドキュメント） ---------- */
+const W = { list: null, cat: 'all', q: '', hits: null, open: null, docs: {}, busy: false };
+function wikiView(){
+  const head = `<header><small>SEKITEI ISHIDA</small><h1>マニュアル</h1><p class="sub">仕事の手順やきまりを、分類ごとにまとめています。</p></header>`;
+  const l = W.list;
+  if (!l) return head + `<div class="card state"><b>読み込み中…</b></div>`;
+  if (l.status !== 'OK') return head + errorCard(l.message || 'マニュアルを読み込めませんでした。');
+  const search = `<form class="form" id="wsearch" style="gap:8px"><div class="row" style="gap:8px;flex-wrap:nowrap"><input name="q" type="search" value="${esc(W.q)}" placeholder="キーワードで探す（本文も探します）" style="flex:1;min-width:0" enterkeyhint="search"><button class="btn" type="submit">探す</button></div></form>`;
+  let docs = l.docs;
+  if (W.hits) docs = docs.filter(d => W.hits.indexOf(d.id) >= 0 || d.title.indexOf(W.q) >= 0);
+  if (W.cat !== 'all') docs = docs.filter(d => d.cat === W.cat);
+  const newer = l.docs.filter(d => d.isNew).sort((a, b) => b.t - a.t);
+  const chips = `<div class="fchips"><button class="fchip" data-wcat="all" aria-pressed="${W.cat === 'all'}">すべて ${l.docs.length}</button>${l.cats.map(c => `<button class="fchip" data-wcat="${esc(c)}" aria-pressed="${W.cat === c}">${esc(c)} ${l.docs.filter(d => d.cat === c).length}</button>`).join('')}</div>`;
+  const item = (d, sc) => `<button class="nitem" data-wopen="${esc(d.id)}"><span class="dot read"></span><span style="min-width:0"><span>${sc ? `<span class="tag">${esc(d.cat)}</span>` : ''}${d.isNew ? '<span class="tag must">更新</span>' : ''}</span><span class="ntitle">${esc(d.title)}</span><span class="nmeta">${esc(d.upd)} 更新</span></span></button>`;
+  const groups = W.cat === 'all' && !W.hits ? l.cats.map(c => ({ c: c, ds: docs.filter(d => d.cat === c) })).filter(g => g.ds.length) : [{ c: '', ds: docs }];
+  const admin = l.role === 'admin' && l.folderUrl ? `<p class="note">管理者の方へ：マニュアルを増やす・直すときは、<a href="${esc(l.folderUrl)}" target="_blank" rel="noopener">マニュアル用フォルダ</a>の分類フォルダにGoogleドキュメントを入れてください。</p>` : '';
+  return head + search +
+    (W.hits ? `<div class="row" style="justify-content:space-between"><span class="nmeta">「${esc(W.q)}」の結果 ${docs.length}件</span><button class="btn ghost" data-act="wclear">検索をやめる</button></div>` : '') +
+    (!W.hits && W.cat === 'all' && newer.length ? `<div class="card"><h2 style="margin-bottom:6px">最近更新されたもの</h2><div class="nlist">${newer.slice(0, 3).map(d => item(d, true)).join('')}</div></div>` : '') +
+    chips +
+    (docs.length ? groups.map(g => `<div class="card">${g.c ? `<h2 style="margin-bottom:6px">${esc(g.c)}</h2>` : ''}<div class="nlist">${g.ds.map(d => item(d, !g.c && W.cat === 'all')).join('')}</div></div>`).join('')
+      : `<div class="card"><p class="note" style="margin:0">${l.docs.length ? '該当するマニュアルはありません。' : 'まだマニュアルがありません。'}</p></div>`) + admin;
+}
+function wikiDoc(){
+  const j = W.docs[W.open];
+  const back = `<button class="back" data-act="wback">← マニュアル一覧</button>`;
+  if (!j) return back + `<div class="card state"><b>読み込み中…</b></div>`;
+  if (j.status !== 'OK') return back + errorCard(j.message || 'このマニュアルを開けませんでした。');
+  return back + `<article class="card wdoc"><div><span class="tag">${esc(j.doc.cat)}</span><span class="nmeta" style="display:inline">${esc(j.doc.upd)} 更新</span></div>
+    <h1 class="wtitle">${esc(j.doc.title)}</h1>${j.html || '<p class="note">中身がまだありません。</p>'}</article>
+    ${j.editUrl ? `<p class="note"><a href="${esc(j.editUrl)}" target="_blank" rel="noopener">Googleドキュメントで直す</a>（管理者だけに表示）</p>` : ''}`;
+}
+async function loadWiki(fresh){
+  try { W.list = await call('wiki', { fresh: !!fresh }, 'raw'); } catch (e) { W.list = { status: 'ERROR', message: (e && e.message) || String(e) }; }
+  if (S.tab === 'wiki') draw();
+}
+async function openWiki(id){
+  W.open = id; draw(); window.scrollTo(0, 0);
+  if (W.docs[id] && W.docs[id].status === 'OK') return;
+  try { W.docs[id] = await call('wikiGet', { id: id }, 'raw'); } catch (e) { W.docs[id] = { status: 'ERROR', message: (e && e.message) || String(e) }; }
+  if (S.tab === 'wiki') draw();
+}
+
 const ICON = {
   notice: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>',
   apply: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15l2 2 4-4"/></svg>',
   repair: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>',
   members: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
   cal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
+  wiki: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/></svg>',
   sales: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15v2M12 10v7M17 6v11"/></svg>',
 };
 function draw(){
@@ -615,10 +670,12 @@ function draw(){
     <button data-tab="apply" aria-current="${S.tab === 'apply' ? 'page' : 'false'}">${ICON.apply}${appBadge() ? `<span class="badge">${appBadge()}</span>` : ''}申請</button>
     <button data-tab="repair" aria-current="${S.tab === 'repair' ? 'page' : 'false'}">${ICON.repair}修繕</button>
     <button data-tab="members" aria-current="${S.tab === 'members' ? 'page' : 'false'}">${ICON.members}メンバー</button>
-    <button data-tab="cal" aria-current="${S.tab === 'cal' ? 'page' : 'false'}">${ICON.cal}カレンダー</button>
-    <button data-tab="sales" aria-current="${S.tab === 'sales' ? 'page' : 'false'}">${ICON.sales}今月の数字</button>`;
+    <button data-tab="cal" aria-current="${S.tab === 'cal' ? 'page' : 'false'}">${ICON.cal}予定</button>
+    <button data-tab="wiki" aria-current="${S.tab === 'wiki' ? 'page' : 'false'}">${ICON.wiki}マニュアル</button>
+    <button data-tab="sales" aria-current="${S.tab === 'sales' ? 'page' : 'false'}">${ICON.sales}数字</button>`;
   if (S.tab === 'sales') { $app.innerHTML = salesView(S.sales); return; }
   if (S.tab === 'members') { $app.innerHTML = membersView(); return; }
+  if (S.tab === 'wiki') { $app.innerHTML = W.open ? wikiDoc() : wikiView(); return; }
   if (S.tab === 'cal') { $app.innerHTML = C.add ? calAdd() : calView(); return; }
   if (S.tab === 'apply') { $app.innerHTML = A.form ? applyForm() : A.open ? applyDetail() : applyList(); return; }
   if (S.tab === 'repair') {
@@ -638,6 +695,7 @@ document.addEventListener('click', async ev => {
   if (t.dataset.tab) { S.tab = t.dataset.tab; S.open = null; S.compose = false; R.open = null; R.add = false; draw(); window.scrollTo(0, 0);
     if (S.tab === 'apply' && !S.ap) call('apps').catch(e => { S.ap = { status: 'ERROR', message: (e && e.message) || String(e) }; draw(); });
     if (S.tab === 'members') { M.at = Date.now(); loadMembers(M.day, true); }
+    if (S.tab === 'wiki') { W.open = null; loadWiki(); }
     if (S.tab === 'cal') { C.add = false; if (!C.ym) C.ym = ymOf(new Date()); loadCal(C.ym, true); }
     if (S.tab === 'repair' && !S.rp) call('repairs').catch(e => { S.rp = { status: 'ERROR', message: (e && e.message) || String(e) }; draw(); });
     return; }
@@ -649,6 +707,8 @@ document.addEventListener('click', async ev => {
   if (t.dataset.cdel) { if (C.busy) return; C.busy = true; t.disabled = true;
     try { const j = await call('calDel', { id: t.dataset.cdel, ym: C.ym }, 'raw'); C.data[C.ym] = j; C.open = null; draw(); toast(j.message); } catch (e) { toast(e.message); t.disabled = false; }
     C.busy = false; return; }
+  if (t.dataset.wcat) { W.cat = t.dataset.wcat; draw(); return; }
+  if (t.dataset.wopen) { openWiki(t.dataset.wopen); return; }
   if (t.dataset.mf) { M.filter = t.dataset.mf; draw(); return; }
   if (t.dataset.mopen) { M.open = M.open === t.dataset.mopen ? null : t.dataset.mopen; draw(); return; }
   if (t.dataset.aform) { A.form = t.dataset.aform; A.edit = null; draw(); window.scrollTo(0, 0); return; }
@@ -671,6 +731,8 @@ document.addEventListener('click', async ev => {
   if (a === 'aback') { if (A.form && A.edit) { A.form = null; A.edit = null; } else if (A.form) { A.form = null; A.tab = 'new'; } else A.open = null; draw(); return; }
   if (a === 'aredo') { const d = S.ap.detail; A.edit = d; A.form = d.form; draw(); window.scrollTo(0, 0); return; }
   if (a === 'aprint') { window.print(); return; }
+  if (a === 'wback') { W.open = null; draw(); return; }
+  if (a === 'wclear') { W.q = ''; W.hits = null; draw(); return; }
   if (a === 'caddopen') { C.add = true; draw(); window.scrollTo(0, 0); return; }
   if (a === 'cback') { C.add = false; draw(); return; }
   if (a === 'callall') { C.day = null; C.open = null; draw(); return; }
@@ -692,6 +754,13 @@ document.addEventListener('change', async ev => {
 });
 document.addEventListener('submit', async ev => {
   const id = ev.target.id;
+  if (id === 'wsearch') {
+    ev.preventDefault(); const q = String(new FormData(ev.target).get('q') || '').trim();
+    if (!q) { W.q = ''; W.hits = null; draw(); return; }
+    if (W.busy) return; W.busy = true; W.q = q; W.cat = 'all'; const btn = ev.target.querySelector('[type=submit]'); btn.disabled = true; btn.textContent = '探しています…';
+    try { const j = await call('wikiSearch', { q: q }, 'raw'); W.hits = j.hits; } catch (e) { toast(e.message); }
+    W.busy = false; draw(); return;
+  }
   if (id === 'kform') {
     ev.preventDefault(); if (C.busy) return; C.busy = true;
     const f = new FormData(ev.target), btn = ev.target.querySelector('[type=submit]'); btn.disabled = true; btn.textContent = '追加しています…';
@@ -817,7 +886,15 @@ const DEMO_CAL = { status: 'OK', role: DEMO.role, today: '2026-10-17', holidays:
   { id: 'c3', title: '見本の勉強会', all: false, sd: '2026-10-20', ed: '2026-10-20', st: '19:00', et: '20:00', loc: '', desc: 'オンライン参加はこちら https://example.com/meet', by: '' },
   { id: 'c4', title: '本部会議', all: true, sd: '2026-10-23', ed: '2026-10-23', st: '', et: '', loc: '', desc: '', by: '' },
   { id: 'c5', title: '避難訓練', all: false, sd: '2026-10-26', ed: '2026-10-26', st: '9:00', et: '10:00', loc: 'ロビー', desc: '全員参加です。', by: '見本 支配人' }] };
+const DEMO_WIKI = { status: 'OK', role: DEMO.role, cats: ['共通', 'フロント・予約', '接客'], folderUrl: DEMO.role === 'admin' ? '#' : '', docs: [
+  { id: 'w1', title: 'ポータルの使い方', cat: '共通', upd: '10月17日', t: 3, isNew: true },
+  { id: 'w2', title: 'チェックインの流れ', cat: 'フロント・予約', upd: '10月2日', t: 2, isNew: false },
+  { id: 'w3', title: 'お茶出しの手順', cat: '接客', upd: '9月20日', t: 1, isNew: false }] };
 function demoCall(action, x){
+  if (action === 'wiki') return DEMO_WIKI;
+  if (action === 'wikiSearch') return { status: 'OK', hits: x.q.indexOf('茶') >= 0 ? ['w3'] : [] };
+  if (action === 'wikiGet') return { status: 'OK', doc: DEMO_WIKI.docs.find(d => d.id === x.id), editUrl: DEMO.role === 'admin' ? '#' : '',
+    html: '<h2>見出しの見本</h2><p>本文の見本です。<b>太字</b>や<a href="https://example.com" target="_blank" rel="noopener">リンク</a>も出ます。</p><ol><li style="margin-left:0em">1つめの手順</li><li style="margin-left:0em">2つめの手順</li></ol><div class="wtbl"><table><tr><th>項目</th><th>内容</th></tr><tr><td>時間</td><td>15:00〜</td></tr></table></div>' };
   if (action.indexOf('cal') === 0) {
     if (action === 'calAdd') DEMO_CAL.events.push({ id: 'c' + Date.now(), title: x.title, all: x.all, sd: x.date, ed: x.all && x.endDate > x.date ? x.endDate : x.date, st: x.all ? '' : x.start, et: x.all ? '' : x.end, loc: x.loc, desc: x.memo, by: '見本' });
     if (action === 'calDel') DEMO_CAL.events = DEMO_CAL.events.filter(e => e.id !== x.id);
