@@ -182,6 +182,7 @@ td{padding:9px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
 .cmore{padding:0 0 12px 22px}
 .cdesc{white-space:pre-wrap;font-size:13px;overflow-wrap:anywhere;margin:6px 0 0}
 .cdesc a{color:var(--info)}
+.perm{border:1px solid var(--line);border-radius:10px;padding:8px 12px 10px;margin:0;display:grid;gap:8px}.perm legend{font-size:13px;font-weight:700;padding:0 4px}
 .mtl{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:6px;margin-top:8px}
 .mtl span{display:grid;gap:1px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:12px}
 .mtl small{color:var(--muted);font-size:11px}
@@ -401,7 +402,7 @@ async function loadPhoto(r){
 
 /* ---------- 申請・承認 ---------- */
 const FORMS = [
-  { k: 'ringi', t: '稟議書', d: '契約・掲載・導入など、費用や会社の判断が必要な案件', fields: [
+  { k: 'ringi', t: '稟議書', g: '申請', d: '契約・掲載・導入など、費用や会社の判断が必要な案件', fields: [
     ['subject', '件名', 'text', null, true, '例：「善光寺御開帳」パンフレットへの掲載について'],
     ['vendor', '取引先', 'text'], ['account', '経理科目', 'select', ['広告宣伝費', '業務委託費', '支払手数料', '修繕費', '消耗品費', '研修費', 'その他']],
     ['pay', '支払方法', 'select', ['事前振込', '請求書払い', '口座引落', 'クレジットカード', '現金']],
@@ -409,27 +410,48 @@ const FORMS = [
     ['orderDate', '発注予定日', 'date'], ['payDate', '支払予定日', 'date'],
     ['purpose', '概要・導入目的', 'textarea', null, true, '何を、なぜ行うのか'], ['cost', '費用詳細', 'textarea', null, false, '内訳、手数料など'],
     ['effect', '期待する効果', 'textarea', null, false, '売上、認知、業務の負担軽減など']] },
-  { k: 'buy', t: '物品購入報告書', d: '備品・設備・消耗品を買うとき（購入前に申請し、購入・納品後に日付を記入）', fields: [
+  { k: 'buy', t: '物品購入報告書', g: '申請', d: '備品・設備・消耗品を買うとき（購入前に申請し、購入・納品後に日付を記入）', fields: [
     ['subject', '購入品名', 'text', null, true, '例：ロビー用加湿器'], ['amount', '金額（総額・円）', 'money', null, false, '内訳を入れると自動で合計します'],
     ['account', '経理科目', 'select', ['消耗品費', '備品費', '修繕費', '広告宣伝費', 'その他']], ['lines', '内訳（4件まで）', 'lines'],
     ['purpose', '購入目的', 'textarea', null, true, '今の困りごと、使う場面'], ['reason', '商品選定理由', 'textarea', null, false, '選んだ理由、比較した候補'],
     ['effect', '期待する効果', 'textarea'], ['orderDate', '購入予定日', 'date'], ['orderWhy', '購入予定日の事由', 'text', null, false, '急ぎの理由など']] },
-  { k: 'trip', t: '出張届 兼 仮払申請書', d: '出張の前に届け出て仮払いを申請。帰ったら同じ書類で出張報告を出す', fields: [
+  { k: 'trip', t: '出張届 兼 仮払申請書', g: '申請', d: '出張の前に届け出て仮払いを申請。帰ったら同じ書類で出張報告を出す', fields: [
     ['from', '出発日', 'date', null, true], ['to', '帰着日', 'date', null, true], ['place', '方面', 'text', null, true, '例：東京方面（宿泊：横浜）'],
     ['with', '同行者', 'text', null, false, 'いなければ空欄'], ['transport', '移動手段', 'select', ['自車', '社用車', '電車', '高速バス', '飛行機']],
     ['purpose', '目的', 'text', null, true, '例：JTB首都圏店舗キャラバンに参加'], ['detail', '日程・宿泊など', 'textarea', null, false, '例：宿泊 〇〇ホテル 8,800円／1泊'],
     ['advance', '仮払い金額（円）', 'money', null, false, '仮払いがなければ空欄'], ['advanceWhat', '仮払いの内訳', 'text', null, false, '交通費・会費・宿泊費等']] },
-  { k: 'report', t: '報告書', d: '研修・業務の結果を報告するとき（事後）', fields: [
+  { k: 'report', t: '報告書', g: '報告', d: '研修・業務の結果を報告するとき（事後）', fields: [
     ['kind', '種類', 'select', ['研修報告', '業務報告', 'その他'], true], ['subject', '件名', 'text', null, true, '例：11月 接遇研修 参加報告'],
     ['date', '実施日', 'date'], ['content', '内容', 'textarea', null, true, '行ったこと、会った人、決まったこと'],
     ['learn', '所感・学んだこと', 'textarea'], ['next', '今後の対応・現場への展開', 'textarea', null, false, '誰に、いつ、何を共有するか']] },
+  { k: 'leave', t: '有給休暇申請書', g: '届', d: '有給休暇を取りたいとき（事前に）', fields: [
+    ['kind', '休暇の種類', 'select', ['全日', '午前半休', '午後半休'], true], ['from', '開始日', 'date', null, true], ['to', '終了日', 'date', null, false, '1日だけなら空欄'],
+    ['days', '日数', 'text', null, false, '例：2日、0.5日'], ['reason', '理由', 'textarea', null, false, '書かなくても申請できます'],
+    ['handover', '不在中の引き継ぎ・連絡先', 'textarea', null, false, '例：予約の折り返しは○○さんに依頼済み']] },
+  { k: 'late', t: '遅刻・早退届', g: '届', d: '遅刻・早退したとき（事前にわかっているときも）', fields: [
+    ['kind', '種類', 'select', ['遅刻', '早退'], true], ['date', '日付', 'date', null, true], ['plan', '予定の時刻', 'text', null, false, '例：出勤 9:00'],
+    ['actual', '実際の時刻', 'text', null, false, '例：9:40 出勤'], ['reason', '理由', 'textarea', null, true],
+    ['contact', '連絡の有無・連絡先', 'text', null, false, '例：8:30 に〇〇さんへ電話']] },
+  { k: 'damage', t: '破損届', g: '届', d: '館内の物やお客様の物を壊した・壊れているのを見つけたとき', fields: [
+    ['subject', '件名', 'text', null, true, '例：結崎 3号室 湯呑み 1客 破損'], ['date', '発生日', 'date', null, true], ['time', '時刻', 'text', null, false, '例：18:20ごろ'],
+    ['place', '場所', 'text', null, true], ['item', '破損した物', 'text', null, true, '品名・数量'], ['detail', '状況', 'textarea', null, true, 'どのように壊れたか'],
+    ['cause', '原因', 'textarea'], ['amount', '損害の見込み額（円）', 'money', null, false, 'わからなければ空欄'], ['measure', '対応・再発防止', 'textarea']] },
+  { k: 'apology', t: '始末書', g: '報告', d: 'ミスや規則違反について、経緯と反省、再発防止策を出すとき', fields: [
+    ['subject', '件名', 'text', null, true, '例：10月15日 夕食の配膳間違いについて'], ['date', '発生日', 'date', null, true],
+    ['content', '事実の経緯', 'textarea', null, true, 'いつ、どこで、何が起きたか'], ['cause', '原因', 'textarea', null, true],
+    ['reflect', '反省', 'textarea'], ['prevent', '再発防止策', 'textarea', null, true, '自分が何を変えるか']] },
+  { k: 'incident', t: '事故・苦情・処理報告書', g: '報告', d: 'お客様の事故・ケガ、苦情、その対応を報告するとき', fields: [
+    ['kind', '区分', 'select', ['事故', '苦情', '事故・苦情', 'その他'], true], ['subject', '件名', 'text', null, true, '例：大浴場での転倒（軽傷）'],
+    ['date', '発生日', 'date', null, true], ['time', '時刻', 'text', null, false, '例：21:10ごろ'], ['place', '場所', 'text'],
+    ['guest', 'お客様（お名前・お部屋）', 'text', null, false, '例：〇〇様 外山 2号室'], ['content', '内容', 'textarea', null, true, '何が起きたか、お客様のお申し出'],
+    ['response', '対応・処理', 'textarea', null, true, '誰が、いつ、どう対応したか'], ['result', '結果・お客様の反応', 'textarea'], ['prevent', '再発防止策', 'textarea']] },
 ];
 const A = { tab: 'queue', form: null, open: null, edit: null };
 const appBadge = () => S.ap && S.ap.apps ? S.ap.apps.filter(a => a.awaitingMe || a.confirmMe || (a.mine && a.status === 'returned')).length : 0;
 function appPill(a){
   if (a.status === 'returned') return '<span class="pill" style="color:var(--crit)"><i></i>差し戻し</span>';
   if (a.confirmMe) return '<span class="pill" style="color:var(--gold)"><i></i>社長の確認待ち（あなた）</span>';
-  if (a.status === 'approved' && a.form === 'report') return `<span class="pill" style="color:var(--accent)"><i></i>承認済み${a.confirmed ? '・社長確認済み' : ''}</span>`;
+  if (a.status === 'approved' && a.cf) return `<span class="pill" style="color:var(--accent)"><i></i>承認済み${a.confirmed ? '・社長確認済み' : ''}</span>`;
   if (a.status === 'approved') return a.form === 'trip' && a.phase === 1 ? '<span class="pill" style="color:var(--info)"><i></i>許可済み・報告待ち</span>' : '<span class="pill" style="color:var(--accent)"><i></i>承認済み</span>';
   return `<span class="pill" style="color:var(--gold)"><i></i>${a.phase === 2 ? '報告：' : ''}${a.awaitingMe ? 'あなたの承認待ち' : esc(a.cur) + ' 確認中'}</span>`;
 }
@@ -445,11 +467,11 @@ function applyList(){
   if (!ap) return `<div class="card state"><b>読み込み中…</b></div>`;
   if (ap.status !== 'OK') return errorCard(ap.message || '申請を読み込めませんでした。');
   const q = ap.apps.filter(a => a.awaitingMe || a.confirmMe), mine = ap.apps.filter(a => a.mine);
-  const tabs = [['queue', '承認待ち', q.length], ['mine', '自分の申請', mine.filter(a => a.status === 'returned').length || null], ['new', '新しく申請']].concat(isAdmin() ? [['all', 'すべて']] : []);
+  const tabs = [['queue', '承認待ち', q.length], ['mine', '自分が出したもの', mine.filter(a => a.status === 'returned').length || null], ['new', '新しく出す']].concat(isAdmin() ? [['all', 'すべて']] : []);
   let body;
-  if (A.tab === 'new') body = `<div class="nlist">${FORMS.map(f => `<button class="nitem" data-aform="${f.k}"><span class="dot read"></span><span><span class="ntitle">${f.t}</span><span class="nmeta">${f.d}</span></span></button>`).join('')}</div>`;
+  if (A.tab === 'new') body = [['申請', '申請（費用・出張）'], ['届', '届出（休暇・勤怠・破損）'], ['報告', '報告']].map(g => `<h2 style="margin:${g[0] === '申請' ? 0 : 14}px 0 4px">${g[1]}</h2><div class="nlist">${FORMS.filter(f => f.g === g[0]).map(f => `<button class="nitem" data-aform="${f.k}"><span class="dot read"></span><span><span class="ntitle">${f.t}</span><span class="nmeta">${f.d}</span></span></button>`).join('')}</div>`).join('');
   else body = appRows(A.tab === 'queue' ? q : A.tab === 'mine' ? mine : ap.apps);
-  return `<header><small>SEKITEI ISHIDA</small><h1>申請</h1><p class="sub">${q.length ? `あなたの承認待ちが ${q.length}件 あります` : '稟議書・物品購入・出張届・報告書'}</p></header>
+  return `<header><small>SEKITEI ISHIDA</small><h1>申請・報告</h1><p class="sub">${q.length ? `あなたの承認待ちが ${q.length}件 あります` : '稟議書・出張届・有給・遅刻早退・破損届・始末書・各種報告書'}</p></header>
     <div class="fchips">${tabs.map(t => `<button class="fchip" data-atab="${t[0]}" aria-pressed="${A.tab === t[0]}">${t[1]}${t[2] ? ' ' + t[2] : ''}</button>`).join('')}</div>
     <div class="card">${body}</div>`;
 }
@@ -477,7 +499,7 @@ function applyDetail(){
   const decide = d.awaitingMe ? `<div class="card"><h2 style="margin-bottom:10px">あなたの判断</h2><form class="form" id="dform">
       <label>コメント（差し戻し・条件付きのときは必須）<textarea name="comment" style="min-height:80px"></textarea></label>
       <div class="row"><button class="btn" type="submit" data-dec="ok">承認する</button><button class="btn ghost" type="submit" data-dec="cond">条件付きで承認</button><button class="btn danger" type="submit" data-dec="back">差し戻す</button></div></form></div>` : '';
-  const conf = d.confirmMe ? `<div class="card"><h2 style="margin-bottom:6px">社長の確認</h2><p class="nmeta" style="margin:0 0 10px">報告書は支配人の承認で完了しています。目を通したら確認の印を押してください。</p>
+  const conf = d.confirmMe ? `<div class="card"><h2 style="margin-bottom:6px">社長の確認</h2><p class="nmeta" style="margin:0 0 10px">この書類は支配人の承認で完了しています。目を通したら確認の印を押してください。</p>
       <form class="form" id="cform"><label>コメント（任意）<textarea name="comment" style="min-height:70px"></textarea></label>
       <div class="row"><button class="btn" type="submit">確認しました（印を押す）</button></div></form></div>` : '';
   const trip = d.mine && d.form === 'trip' && d.status === 'approved' && d.phase === 1 ? `<div class="card"><h2 style="margin-bottom:10px">出張報告を書く</h2>
@@ -524,9 +546,11 @@ function mState(p, live){
 const mPill = st => `<span class="pill" style="color:${MCOL[st] || 'var(--muted)'}"><i></i>${esc(st)}</span>`;
 
 function membersView(){
+  const modeChips = isAdmin() ? `<div class="fchips"><button class="fchip" data-mmode="shift" aria-pressed="${M.mode !== 'admin'}">出勤状況</button><button class="fchip" data-mmode="admin" aria-pressed="${M.mode === 'admin'}">メンバー管理</button></div>` : '';
+  if (M.mode === 'admin' && isAdmin()) return `<header><small>SEKITEI ISHIDA</small><h1>メンバー</h1><p class="sub">入社・退社・部署異動・権限を管理します（管理者だけに表示）。</p></header>` + modeChips + memAdmin();
   const d = M.data[M.day];
   const dayChips = `<div class="fchips">${[['today', '今日'], ['tomorrow', '明日']].map(t => `<button class="fchip" data-mday="${t[0]}" aria-pressed="${M.day === t[0]}">${t[1]}</button>`).join('')}</div>`;
-  const head = `<header><small>SEKITEI ISHIDA</small><h1>メンバー</h1><p class="sub">シフト表から、${M.day === 'today' ? '今' : '明日'}の出勤状況を表示しています。</p></header>`;
+  const head = `<header><small>SEKITEI ISHIDA</small><h1>メンバー</h1><p class="sub">シフト表から、${M.day === 'today' ? '今' : '明日'}の出勤状況を表示しています。</p></header>` + modeChips;
   if (!d) return head + dayChips + `<div class="card state"><b>読み込み中…</b></div>`;
   if (d.status !== 'OK') return head + dayChips + errorCard(d.message || 'シフト表を読み込めませんでした。');
   const title = `<div class="card"><div class="row" style="justify-content:space-between;align-items:baseline"><h2>${esc(d.date)}（${esc(d.wd)}）</h2><span class="nmeta">${esc(d.updatedAt)} 時点</span></div>
@@ -747,6 +771,50 @@ async function loadHome(){
   if (S.tab === 'home') draw();
 }
 
+/* ---------- メンバー管理（管理者だけ） ---------- */
+const MG = { data: null, open: null, add: false, filter: '在籍', busy: false };
+function memAdmin(){
+  const d = MG.data;
+  if (!d) return `<div class="card state"><b>読み込み中…</b></div>`;
+  if (d.status !== 'OK') return errorCard(d.message || 'メンバーを読み込めませんでした。');
+  if (MG.add) return `<button class="back" data-act="mgback">← メンバー一覧</button>
+    <div class="card"><h2 style="margin-bottom:6px">入社の登録</h2><p class="note" style="margin:0 0 12px">LINE WORKS のアカウントを作ったあと、ここで名前を登録しておくと、本人が初めてポータルを開いたときに自動で結びつきます。名前は LINE WORKS の表示名と同じにしてください（空白はあってもなくても大丈夫です）。</p>
+    <form class="form" id="mgadd"><label>名前<input name="name" required maxlength="40" placeholder="例：石田 花子"></label>
+      <label>部署<select name="dept"><option value="">あとで決める</option>${d.depts.map(x => `<option>${esc(x)}</option>`).join('')}</select></label>
+      <label>入社日<input type="date" name="joined"></label>
+      <div class="row"><button class="btn" type="submit">登録する</button><button class="btn ghost" type="button" data-act="mgback">やめる</button></div></form></div>`;
+  const m = MG.open != null && d.members.find(x => x.row === MG.open);
+  if (m) return `<button class="back" data-act="mgback">← メンバー一覧</button>
+    <div class="card"><div class="card-h"><h2 style="font-size:18px">${esc(m.name)}${m.me ? ' <span class="tag">自分</span>' : ''}</h2>${m.status === '退社' ? '<span class="tag must">退社</span>' : ''}</div>
+      <p class="nmeta" style="margin:0 0 12px">${m.linked ? `LINE WORKS と結びつき済み${m.last ? '・最終利用 ' + esc(m.last) : ''}` : 'まだ一度もポータルを開いていません'}</p>
+      <form class="form" id="mgsave">
+        <label>部署（異動のときはここを変える）<select name="dept"><option value="">未設定</option>${d.depts.map(x => `<option ${x === m.dept ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></label>
+        <fieldset class="perm"><legend>権限</legend>
+          <label class="chk"><input type="checkbox" name="admin" ${m.admin ? 'checked' : ''} ${m.me ? 'disabled' : ''}> 管理者（お知らせの投稿、数字の全員分、目標、予定の追加、メンバー管理）</label>
+          <label class="chk"><input type="checkbox" name="manager" ${m.manager ? 'checked' : ''}> 部課長以上（修繕の状態・完了予定日の変更、修繕の通知）</label></fieldset>
+        <label>売上表のシート（接客部の人だけ）${d.sheets.length ? `<select name="sheet"><option value="">なし</option>${d.sheets.concat(m.sheet && d.sheets.indexOf(m.sheet) < 0 ? [m.sheet] : []).map(x => `<option ${x === m.sheet ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>` : `<input name="sheet" value="${esc(m.sheet)}">`}</label>
+        <div class="row" style="gap:10px;align-items:flex-end"><label style="flex:1">入社日<input type="date" name="joined" value="${esc(m.joined)}"></label><label style="flex:1">退社日<input type="date" name="left" value="${esc(m.left)}"></label></div>
+        <label>在籍<select name="status" ${m.me ? 'disabled' : ''}><option ${m.status === '在籍' ? 'selected' : ''}>在籍</option><option ${m.status === '退社' ? 'selected' : ''}>退社</option></select></label>
+        <p class="note" style="margin:0">退社にすると、ポータルが開けなくなり、通知・既読の人数・承認者から外れます（記録は残ります）。権限も外れます。</p>
+        <div class="row"><button class="btn" type="submit">保存する</button></div></form></div>
+    ${m.log.length ? `<div class="card"><h2 style="margin-bottom:8px">変更の記録</h2><ol class="rlog">${m.log.slice().reverse().map(l => `<li><span class="nmeta">${esc(l[0])}・${esc(l[1])}</span><span>${esc(l[2])}</span></li>`).join('')}</ol></div>` : ''}
+    <p class="note">承認者タブ（部署責任者など）の名前は、異動に合わせて設定用スプレッドシートで直してください。</p>`;
+  const act = d.members.filter(x => x.status === '在籍'), gone = d.members.filter(x => x.status === '退社');
+  const list = MG.filter === '退社' ? gone : act;
+  const groups = d.depts.concat(['']).map(g => ({ g: g, ms: list.filter(x => (x.dept || '') === g) })).filter(x => x.ms.length);
+  return `<div class="row"><button class="btn" data-act="mgadd">＋ 入社の登録</button></div>
+    <div class="fchips"><button class="fchip" data-mgf="在籍" aria-pressed="${MG.filter === '在籍'}">在籍 ${act.length}</button><button class="fchip" data-mgf="退社" aria-pressed="${MG.filter === '退社'}">退社 ${gone.length}</button></div>
+    ${groups.length ? groups.map(x => `<div class="card"><h2 style="margin-bottom:4px">${esc(x.g || '部署 未設定')}</h2><div class="nlist">${x.ms.map(m => `<button class="nitem" data-mgopen="${m.row}"><span class="dot read"></span><span style="min-width:0">
+      <span class="ntitle">${esc(m.name)}${m.me ? ' <span class="tag">自分</span>' : ''}</span>
+      <span>${m.admin ? '<span class="tag must">管理者</span>' : ''}${m.manager ? '<span class="tag">部課長以上</span>' : ''}${m.sheet ? '<span class="tag">売上表あり</span>' : ''}${!m.linked ? '<span class="tag">未利用</span>' : ''}</span>
+      <span class="nmeta">${m.joined ? '入社 ' + esc(m.joined.replace(/-/g, '/')) : ''}${m.left ? '　退社 ' + esc(m.left.replace(/-/g, '/')) : ''}${m.last ? '　最終利用 ' + esc(m.last) : ''}</span></span></button>`).join('')}</div></div>`).join('')
+      : '<div class="card"><p class="note" style="margin:0">該当する人はいません。</p></div>'}`;
+}
+async function loadMg(){
+  try { MG.data = await call('memList', {}, 'raw'); } catch (e) { MG.data = { status: 'ERROR', message: (e && e.message) || String(e) }; }
+  if (S.tab === 'members') draw();
+}
+
 const ICON = {
   notice: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>',
   apply: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15l2 2 4-4"/></svg>',
@@ -761,7 +829,7 @@ function draw(){
   const tb = document.getElementById('tabbar');
   tb.hidden = false;
   const u = unreadCount();
-  const nav = [['home', 'ホーム', ''], ['notice', 'お知らせ', u], ['apply', '申請', appBadge()], ['repair', '修繕', ''], ['members', 'メンバー', ''],
+  const nav = [['home', 'ホーム', ''], ['notice', 'お知らせ', u], ['apply', '申請・報告', appBadge()], ['repair', '修繕', ''], ['members', 'メンバー', ''],
     ['cal', '予定', ''], ['wiki', 'マニュアル', ''], ['sales', '数字', '']];
   const me = (H.data && H.data.name) || (S.nb && S.nb.displayName) || '';
   tb.innerHTML = `<div class="brand"><small>SEKITEI ISHIDA</small><b>石苔亭いしだ<br>社内ポータル</b></div>` +
@@ -805,6 +873,9 @@ document.addEventListener('click', async ev => {
     C.busy = false; return; }
   if (t.dataset.wcat) { W.cat = t.dataset.wcat; draw(); return; }
   if (t.dataset.wopen) { openWiki(t.dataset.wopen); return; }
+  if (t.dataset.mmode) { M.mode = t.dataset.mmode; MG.open = null; MG.add = false; draw(); if (M.mode === 'admin') loadMg(); return; }
+  if (t.dataset.mgf) { MG.filter = t.dataset.mgf; draw(); return; }
+  if (t.dataset.mgopen) { MG.open = +t.dataset.mgopen; draw(); window.scrollTo(0, 0); return; }
   if (t.dataset.mf) { M.filter = t.dataset.mf; draw(); return; }
   if (t.dataset.mopen) { M.open = M.open === t.dataset.mopen ? null : t.dataset.mopen; draw(); return; }
   if (t.dataset.aform) { A.form = t.dataset.aform; A.edit = null; draw(); window.scrollTo(0, 0); return; }
@@ -831,6 +902,8 @@ document.addEventListener('click', async ev => {
   if (a === 'hgoalx') { H.editGoal = false; draw(); return; }
   if (a === 'hword') { H.editWord = true; draw(); return; }
   if (a === 'hwordx') { H.editWord = false; draw(); return; }
+  if (a === 'mgback') { MG.open = null; MG.add = false; draw(); return; }
+  if (a === 'mgadd') { MG.add = true; draw(); window.scrollTo(0, 0); return; }
   if (a === 'wback') { W.open = null; draw(); return; }
   if (a === 'wclear') { W.q = ''; W.hits = null; draw(); return; }
   if (a === 'caddopen') { C.add = true; draw(); window.scrollTo(0, 0); return; }
@@ -854,6 +927,17 @@ document.addEventListener('change', async ev => {
 });
 document.addEventListener('submit', async ev => {
   const id = ev.target.id;
+  if (id === 'mgadd' || id === 'mgsave') {
+    ev.preventDefault(); if (MG.busy) return; MG.busy = true;
+    const f = new FormData(ev.target), btn = ev.target.querySelector('[type=submit]'); btn.disabled = true;
+    const m = id === 'mgsave' && MG.data.members.find(x => x.row === MG.open);
+    if (m && f.get('status') === '退社' && m.status !== '退社' && !confirm(m.name + 'さんを退社にします。よろしいですか？')) { MG.busy = false; btn.disabled = false; return; }
+    const v = id === 'mgadd' ? { name: f.get('name'), dept: f.get('dept'), joined: f.get('joined') }
+      : { row: m.row, name: m.name, dept: f.get('dept'), admin: m.me ? true : !!f.get('admin'), manager: !!f.get('manager'), sheet: f.get('sheet') || '', joined: f.get('joined'), left: f.get('left'), status: m.me ? '在籍' : f.get('status') };
+    try { const j = await call(id === 'mgadd' ? 'memAdd' : 'memSave', v, 'raw'); MG.data = j; MG.add = false; draw(); window.scrollTo(0, 0); toast(j.message); }
+    catch (e) { toast(e.message); btn.disabled = false; }
+    MG.busy = false; return;
+  }
   if (id === 'hgoal' || id === 'hword') {
     ev.preventDefault(); if (H.busy) return; H.busy = true;
     const f = new FormData(ev.target), btn = ev.target.querySelector('[type=submit]'); btn.disabled = true;
@@ -890,6 +974,7 @@ document.addEventListener('submit', async ev => {
         if (fl[4] && !o[k] && !(k === 'amount' && o.lines && o.lines.length)) { toast(fl[1] + 'を入れてください'); return; }
       }
       if (A.form === 'trip' && o.from && o.to && o.to < o.from) { toast('帰着日が出発日より前になっています'); return; }
+      if (A.form === 'leave' && o.from && o.to && o.to < o.from) { toast('終了日が開始日より前になっています'); return; }
       const subject = A.form === 'trip' ? o.purpose : o.subject; delete o.subject;
       v = { form: A.form, subject: subject, v: o, id: A.edit ? A.edit.id : undefined }; action = 'appSubmit';
     } else if (id === 'dform') {
@@ -972,7 +1057,7 @@ const DEMO = {status:'OK',role:new URLSearchParams(location.search).get('role')=
   ranking:[['見本A',24000,0],['見本B',18500,0],['見本C',16500,11000],['見本D',15500,0],['見本 花子',14000,22000],['見本E',12000,0],['見本F',9500,0],['見本G',7000,0],['見本H',3000,0],['見本I',0,7000]].map((r,i)=>({rank:r[1]?i+1:null,name:r[0],sum:r[1],bsum:r[2],esum:r[0]==='見本 花子'?16500:0}))};
 
 const DEMO_MODE = !!new URLSearchParams(location.search).get('demo');
-const DEMO_NB = { status: 'OK', role: DEMO.role, cats: ['全体', '業務', '人事', '行事'], notices: [
+const DEMO_NB = { status: 'OK', role: DEMO.role, cats: ['全体', '業務', '人事', '行事', '和', 'フロント', '予約', '内務'], notices: [
   { id: 'd3', date: '10月9日 9:00', by: '見本 支配人', cat: '人事', must: true, title: '冬季シフト希望の提出について（10/15締切）', body: '11月〜2月のシフト希望を、各部署のリーダー経由で10月15日までに提出してください。', read: false, readCount: 6, total: 10, unread: ['見本A', '見本B', '見本C', '見本D'] },
   { id: 'd2', date: '10月7日 15:30', by: '見本 支配人', cat: '業務', must: false, title: '紅葉シーズンの貸切風呂ご案内手順', body: '10月10日より、貸切風呂のご予約はチェックイン時にフロントでお受けします。', read: true, readCount: 10, total: 10, unread: [] },
 ] };
@@ -1002,7 +1087,17 @@ const DEMO_HOME = { status: 'OK', role: DEMO.role, name: DEMO.role === 'admin' ?
   goal: { amount: 2500000, actual: 1180000, lastDay: 16, updatedAt: '10月17日 9:00', parts: { drink: 820000, betsu: 290000, este: 70000 } },
   word: { text: '紅葉の見頃が近づいてきました。お客様に「今がいちばん」の景色を、一言添えてお伝えしましょう。', by: '見本 支配人', at: '10月17日 8:30' },
   events: { today: [{ title: '増売会議', time: '終日' }, { title: '見本 来館', time: '終日' }], tomorrow: [{ title: '見本 来館', time: '終日' }] } };
+const DEMO_MG = { status: 'OK', depts: ['フロント・予約', '接客部（和）', '板場', '営業推進部', '経理', '総務', '執行部'], sheets: ['見本A', '見本B'], message: '', members: [
+  { row: 2, name: '見本 支配人', linked: true, sheet: '', admin: true, manager: true, dept: '執行部', status: '在籍', joined: '2012-12-01', left: '', last: '10月18日', log: [], me: true },
+  { row: 3, name: '見本 花子', linked: true, sheet: '見本A', admin: false, manager: false, dept: '接客部（和）', status: '在籍', joined: '2024-04-01', left: '', last: '10月17日', log: [['10/1 9:00', '見本 支配人', '部署 フロント・予約→接客部（和）']], me: false },
+  { row: 4, name: '見本 新人', linked: false, sheet: '', admin: false, manager: false, dept: '', status: '在籍', joined: '2026-11-01', left: '', last: '', log: [], me: false },
+  { row: 5, name: '見本 OB', linked: true, sheet: '', admin: false, manager: false, dept: '板場', status: '退社', joined: '2020-04-01', left: '2026-03-31', last: '3月30日', log: [], me: false }] };
 function demoCall(action, x){
+  if (action.indexOf('mem') === 0 && action !== 'members') {
+    if (action === 'memAdd') DEMO_MG.members.push({ row: DEMO_MG.members.length + 2, name: x.name, linked: false, sheet: '', admin: false, manager: false, dept: x.dept, status: '在籍', joined: x.joined, left: '', last: '', log: [['たった今', '見本', '入社の登録']], me: false });
+    if (action === 'memSave') { const m = DEMO_MG.members.find(y => y.row === x.row); Object.assign(m, { dept: x.dept, admin: x.admin, manager: x.manager, sheet: x.sheet, joined: x.joined, left: x.left, status: x.status }); m.log.push(['たった今', '見本', '変更']); }
+    return Object.assign(JSON.parse(JSON.stringify(DEMO_MG)), { message: action === 'memList' ? '' : '保存しました（見本）' });
+  }
   if (action.indexOf('home') === 0) {
     if (action === 'homeGoal') { DEMO_HOME.goal.amount = Number(String(x.amount).replace(/[^\d]/g, '')); DEMO_HOME.message = '目標を保存しました。'; }
     if (action === 'homeWord') { DEMO_HOME.word = { text: x.text, by: DEMO_HOME.name, at: 'たった今' }; DEMO_HOME.message = 'ひとことを載せました。'; }
@@ -1037,7 +1132,7 @@ async function start(){
   if (DEMO_MODE) {
     if (DEMO.role !== 'admin') { delete DEMO.ranking; DEMO_NB.notices.forEach(n => { delete n.readers; delete n.unread; }); }
     else delete DEMO.me;
-    S.sales = DEMO; S.nb = DEMO_NB; S.rp = DEMO_RP; call('apps').catch(() => {}); draw(); loadHome(); return;
+    S.sales = DEMO; S.nb = DEMO_NB; S.rp = DEMO_RP; draw(); loadHome(); return;
   }
   try {
     await woff.init({ woffId: WOFF_ID });
