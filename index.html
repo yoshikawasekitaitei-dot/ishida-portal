@@ -461,6 +461,7 @@ const FORMS = [
 const A = { tab: 'queue', form: null, open: null, edit: null };
 const appBadge = () => S.ap && S.ap.apps ? S.ap.apps.filter(a => a.awaitingMe || a.confirmMe || (a.mine && a.status === 'returned')).length : 0;
 function appPill(a){
+  if (a.status === 'cancelled') return '<span class="pill" style="color:var(--muted)"><i></i>取り下げ</span>';
   if (a.status === 'returned') return '<span class="pill" style="color:var(--crit)"><i></i>差し戻し</span>';
   if (a.confirmMe) return '<span class="pill" style="color:var(--gold)"><i></i>社長の確認待ち（あなた）</span>';
   if (a.status === 'approved' && a.cf) return `<span class="pill" style="color:var(--accent)"><i></i>承認済み${a.confirmed ? '・社長確認済み' : ''}</span>`;
@@ -505,6 +506,14 @@ function applyForm(){
     <form class="form" id="aform">${f.fields.map(x => fieldHtml(x, v)).join('')}
       <div class="row"><button class="btn" type="submit">${ed ? '直して出し直す' : '申請する'}</button><button class="btn ghost" type="button" data-act="aback">やめる</button></div></form></div>`;
 }
+function cancelCard(d){
+  if (!d.canCancel) return d.status === 'cancelled' ? `<div class="lockbox">この申請は取り下げられています${d.note ? '（理由：' + esc(d.note) + '）' : ''}。記録として残っています。</div>` : '';
+  const own = d.mine && (d.status === 'pending' || d.status === 'returned');
+  return `<div class="card"><h2 style="margin-bottom:6px">${own ? 'この申請を取り下げる' : '取り消す（管理者）'}</h2>
+    <p class="nmeta" style="margin:0 0 10px">${own ? '出し間違い・不要になったときに使います。取り下げても記録は残り、承認中の人には通知が届きます。' : '承認が終わったものも取り消せます。申請者に理由つきで通知が届きます。記録とPDFは残ります。'}</p>
+    <form class="form" id="xform"><label>理由${own ? '（任意）' : ' <span class="req">必須</span>'}<input name="reason" maxlength="300" placeholder="例：日付を間違えたため出し直します"></label>
+    <div class="row"><button class="btn danger" type="submit">${own ? '取り下げる' : '取り消す'}</button></div></form></div>`;
+}
 function applyDetail(){
   const d = S.ap.detail;
   if (!d || d.id !== A.open) return `<button class="back" data-act="aback">← 申請一覧</button><div class="card state"><b>読み込み中…</b></div>`;
@@ -531,7 +540,7 @@ function applyDetail(){
     <div class="card"><div class="card-h"><h2>承認の流れ</h2>${appPill(d)}</div><ol class="rlog">${d.route.map(s => `<li style="border-color:${s.now ? 'var(--gold)' : s.done.length && !s.skipped ? 'var(--accent)' : 'var(--line)'}">
       <b>${esc(s.label)}${s.now ? '（確認中）' : ''}</b><span class="nmeta">${s.skipped ? '省略（同じ人が承認済み）' : esc(s.who.join(s.all ? '・' : ' / '))}${s.done.length && !s.skipped ? '　承認：' + esc(s.done.join('、')) : ''}</span></li>`).join('')}
       ${d.confirm ? `<li style="border-color:${d.confirm.done.length ? 'var(--accent)' : 'var(--line)'};border-left-style:dashed"><b>${esc(d.confirm.label)}</b><span class="nmeta">${esc(d.confirm.who.join(' / ') || '未設定')}　${d.confirm.done.length ? '確認：' + esc(d.confirm.done.join('、')) : '任意（押さなくても完了）'}</span></li>` : ''}</ol></div>
-    ${decide}${conf}${trip}${buy}${pdfs}`;
+    ${decide}${conf}${trip}${buy}${pdfs}${cancelCard(d)}`;
 }
 
 /* ---------- 画面の切り替え ---------- */
@@ -539,6 +548,7 @@ function applyDetail(){
 /* ---------- メンバー（出勤状況） ---------- */
 const M = { day: 'today', filter: 'all', data: {}, open: null, q: '', dept: '', skill: '' };
 const SHIFT_P = ['朝', 'C/out', '昼', 'C/in', '夜'];
+const SGRP = { work: ['出勤中', '中抜け', '出勤前', '退勤', '出勤'], off: ['休み', '予定なし'], trip: ['出張・研修'] };
 const MCOL = { '出勤中': 'var(--accent)', '中抜け': 'var(--gold)', '出勤前': 'var(--info)', '退勤': 'var(--muted)', '休み': 'var(--muted)', '予定なし': 'var(--muted)', '出勤': 'var(--info)', '出張・研修': '#9a6fbf' };
 const tm = m => { m = ((m % 1440) + 1440) % 1440; return Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0'); };
 /* 「11:59まで」は「12:00まで」と見せる（シフト表は終わりの1分前で書いてある） */
@@ -592,7 +602,7 @@ function membersView(){
   const depts = list.map(x => x.dept).filter((v, i, a) => v && a.indexOf(v) === i);
   const skills = list.reduce((a, x) => a.concat(x.skills), []).filter((v, i, a) => a.indexOf(v) === i);
   const filtered = () => { const q = (M.q || '').trim();
-  let shown = list.filter(x => (!M.dept || x.dept === M.dept) && (!M.skill || x.skills.indexOf(M.skill) >= 0) &&
+  let shown = list.filter(x => (!M.sf || M.sf === 'all' || (SGRP[M.sf] || []).indexOf(x.st) >= 0) && (!M.dept || x.dept === M.dept) && (!M.skill || x.skills.indexOf(M.skill) >= 0) &&
     (!q || (x.name + x.key + x.kana + x.skills.join(' ') + x.dept).indexOf(q) >= 0));
   const order = ['出勤中', '中抜け', '出勤前', '出勤', '退勤', '休み', '出張・研修', '予定なし', 'シフト表なし'];
   return shown.slice().sort((a, b) => (order.indexOf(a.st) - order.indexOf(b.st)) || (depts.indexOf(a.dept) - depts.indexOf(b.dept))); };
@@ -615,8 +625,10 @@ function membersView(){
       ${x.inShift && p.periods.length ? `<div class="pcells">${cells}</div>` : ''}
       <div class="row" style="gap:6px;margin-top:10px">${x.st !== 'シフト表なし' ? mPill(x.st) : ''}${x.note && live ? `<span class="nmeta">${esc(x.pos ? x.pos + '・' : '')}${esc(x.note)}</span>` : ''}${x.skills.map(k => `<span class="tag">${esc(k)}</span>`).join('')}</div></div>`;
   };
+  const gc = k => list.filter(x => SGRP[k].indexOf(x.st) >= 0).length;
+  const sfChips = `<div class="fchips">${[['all', 'すべて', list.length], ['work', '出勤', gc('work')], ['off', '休み', gc('off')]].concat(gc('trip') ? [['trip', '出張・研修', gc('trip')]] : []).map(c => `<button class="fchip" data-msf="${c[0]}" aria-pressed="${(M.sf || 'all') === c[0]}">${c[1]} ${c[2]}</button>`).join('')}</div>`;
   M.renderList = () => { const shown = filtered(); return shown.length ? `<div class="mgrid">${shown.map(card).join('')}</div>` : '<div class="card"><p class="note" style="margin:0">該当する人はいません。</p></div>'; };
-  return headOf(list.length) + info + search + `<div id="mlist">${M.renderList()}</div>` +
+  return headOf(list.length) + info + sfChips + search + `<div id="mlist">${M.renderList()}</div>` +
     `<p class="note">シフト表の変更は2分ほどで反映されます。${isAdmin() ? '部署・ふりがな・対応できる業務は「メンバー管理」で設定できます。' : ''}</p>`;
 }
 async function loadMembers(day, force){
@@ -704,10 +716,10 @@ async function loadCal(ym, force){
 /* ---------- マニュアル（Googleドキュメント） ---------- */
 const W = { list: null, cat: 'all', q: '', hits: null, open: null, docs: {}, busy: false };
 function wikiView(){
-  const head = `<header><small>SEKITEI ISHIDA</small><h1>マニュアル</h1><p class="sub">仕事の手順やきまりを、分類ごとにまとめています。</p></header>`;
+  const head = `<header><small>SEKITEI ISHIDA</small><h1>Wiki</h1><p class="sub">館内のきまりや知っておきたいことを、分類ごとにまとめています。</p></header>`;
   const l = W.list;
   if (!l) return head + `<div class="card state"><b>読み込み中…</b></div>`;
-  if (l.status !== 'OK') return head + errorCard(l.message || 'マニュアルを読み込めませんでした。');
+  if (l.status !== 'OK') return head + errorCard(l.message || 'Wikiを読み込めませんでした。');
   const search = `<form class="form" id="wsearch" style="gap:8px"><div class="row" style="gap:8px;flex-wrap:nowrap"><input name="q" type="search" value="${esc(W.q)}" placeholder="キーワードで探す（本文も探します）" style="flex:1;min-width:0" enterkeyhint="search"><button class="btn" type="submit">探す</button></div></form>`;
   let docs = l.docs;
   if (W.hits) docs = docs.filter(d => W.hits.indexOf(d.id) >= 0 || d.title.indexOf(W.q) >= 0);
@@ -716,19 +728,19 @@ function wikiView(){
   const chips = `<div class="fchips"><button class="fchip" data-wcat="all" aria-pressed="${W.cat === 'all'}">すべて ${l.docs.length}</button>${l.cats.map(c => `<button class="fchip" data-wcat="${esc(c)}" aria-pressed="${W.cat === c}">${esc(c)} ${l.docs.filter(d => d.cat === c).length}</button>`).join('')}</div>`;
   const item = (d, sc) => `<button class="nitem" data-wopen="${esc(d.id)}"><span class="dot read"></span><span style="min-width:0"><span>${sc ? `<span class="tag">${esc(d.cat)}</span>` : ''}${d.isNew ? '<span class="tag must">更新</span>' : ''}</span><span class="ntitle">${esc(d.title)}</span><span class="nmeta">${esc(d.upd)} 更新</span></span></button>`;
   const groups = W.cat === 'all' && !W.hits ? l.cats.map(c => ({ c: c, ds: docs.filter(d => d.cat === c) })).filter(g => g.ds.length) : [{ c: '', ds: docs }];
-  const admin = l.role === 'admin' && l.folderUrl ? `<p class="note">管理者の方へ：マニュアルを増やす・直すときは、<a href="${esc(l.folderUrl)}" target="_blank" rel="noopener">マニュアル用フォルダ</a>の分類フォルダにGoogleドキュメントを入れてください。</p>` : '';
+  const admin = l.role === 'admin' && l.folderUrl ? `<p class="note">管理者の方へ：ページを増やす・直すときは、<a href="${esc(l.folderUrl)}" target="_blank" rel="noopener">Wiki用フォルダ</a>の分類フォルダにGoogleドキュメントを入れてください。</p>` : '';
   return head + search +
     (W.hits ? `<div class="row" style="justify-content:space-between"><span class="nmeta">「${esc(W.q)}」の結果 ${docs.length}件</span><button class="btn ghost" data-act="wclear">検索をやめる</button></div>` : '') +
     (!W.hits && W.cat === 'all' && newer.length ? `<div class="card"><h2 style="margin-bottom:6px">最近更新されたもの</h2><div class="nlist">${newer.slice(0, 3).map(d => item(d, true)).join('')}</div></div>` : '') +
     chips +
     (docs.length ? groups.map(g => `<div class="card">${g.c ? `<h2 style="margin-bottom:6px">${esc(g.c)}</h2>` : ''}<div class="nlist">${g.ds.map(d => item(d, !g.c && W.cat === 'all')).join('')}</div></div>`).join('')
-      : `<div class="card"><p class="note" style="margin:0">${l.docs.length ? '該当するマニュアルはありません。' : 'まだマニュアルがありません。'}</p></div>`) + admin;
+      : `<div class="card"><p class="note" style="margin:0">${l.docs.length ? '該当するページはありません。' : 'まだページがありません。'}</p></div>`) + admin;
 }
 function wikiDoc(){
   const j = W.docs[W.open];
-  const back = `<button class="back" data-act="wback">← マニュアル一覧</button>`;
+  const back = `<button class="back" data-act="wback">← Wiki一覧</button>`;
   if (!j) return back + `<div class="card state"><b>読み込み中…</b></div>`;
-  if (j.status !== 'OK') return back + errorCard(j.message || 'このマニュアルを開けませんでした。');
+  if (j.status !== 'OK') return back + errorCard(j.message || 'このページを開けませんでした。');
   return back + `<article class="card wdoc"><div><span class="tag">${esc(j.doc.cat)}</span><span class="nmeta" style="display:inline">${esc(j.doc.upd)} 更新</span></div>
     <h1 class="wtitle">${esc(j.doc.title)}</h1>${j.html || '<p class="note">中身がまだありません。</p>'}</article>
     ${j.editUrl ? `<p class="note"><a href="${esc(j.editUrl)}" target="_blank" rel="noopener">Googleドキュメントで直す</a>（管理者だけに表示）</p>` : ''}`;
@@ -887,7 +899,7 @@ function draw(){
   tb.hidden = false;
   const u = unreadCount();
   const nav = [['home', 'ホーム', ''], ['notice', 'お知らせ', u], ['apply', '申請・報告', appBadge()], ['repair', '修繕', ''], ['members', 'メンバー', ''],
-    ['cal', '予定', ''], ['wiki', 'マニュアル', ''], ['sales', '数字', '']];
+    ['cal', '予定', ''], ['wiki', 'Wiki', ''], ['sales', '数字', '']];
   const me = (H.data && H.data.name) || (S.nb && S.nb.displayName) || '';
   tb.innerHTML = `<div class="brand"><small>SEKITEI ISHIDA</small><b>石苔亭いしだ<br>社内ポータル</b></div>` +
     nav.map(n => `<button data-tab="${n[0]}" class="${n[0] === 'sales' ? 'pc-only' : ''}" aria-current="${S.tab === n[0] ? 'page' : 'false'}">${ICON[n[0]]}${n[2] ? `<span class="badge">${n[2]}</span>` : ''}<span class="lbl">${n[1]}</span></button>`).join('') +
@@ -931,6 +943,7 @@ document.addEventListener('click', async ev => {
   if (t.dataset.wcat) { W.cat = t.dataset.wcat; draw(); return; }
   if (t.dataset.wopen) { openWiki(t.dataset.wopen); return; }
   if (t.dataset.mmode) { M.mode = t.dataset.mmode; MG.open = null; MG.add = false; draw(); if (M.mode === 'admin') loadMg(); return; }
+  if (t.dataset.msf) { M.sf = t.dataset.msf; draw(); return; }
   if (t.dataset.mskill) { M.skill = M.skill === t.dataset.mskill ? '' : t.dataset.mskill; draw(); return; }
   if (t.dataset.mgf) { MG.filter = t.dataset.mgf; draw(); return; }
   if (t.dataset.mgopen) { MG.open = +t.dataset.mgopen; draw(); window.scrollTo(0, 0); return; }
@@ -990,6 +1003,16 @@ document.addEventListener('input', ev => {
 });
 document.addEventListener('submit', async ev => {
   const id = ev.target.id;
+  if (id === 'xform') {
+    ev.preventDefault(); if (S.busy) return;
+    const d = S.ap.detail, reason = String(new FormData(ev.target).get('reason') || '').trim();
+    const own = d.mine && (d.status === 'pending' || d.status === 'returned');
+    if (!own && !reason) { toast('取消の理由を入れてください'); return; }
+    if (!confirm(own ? 'この申請を取り下げます。よろしいですか？' : 'この申請を取り消します。よろしいですか？')) return;
+    S.busy = true;
+    try { await call('appCancel', { id: d.id, reason: reason }); toast(S.ap.message || '取り下げました'); } catch (e) { toast(e.message); }
+    S.busy = false; return;
+  }
   if (id === 'mgadd' || id === 'mgsave') {
     ev.preventDefault(); if (MG.busy) return; MG.busy = true;
     const f = new FormData(ev.target), btn = ev.target.querySelector('[type=submit]'); btn.disabled = true;
